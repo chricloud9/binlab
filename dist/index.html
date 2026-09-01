@@ -360,7 +360,7 @@ function buildParts(p) {
     lip = false;
     warnings.push('Stacking lip disabled: floor under 1.4 mm cannot take the base groove.');
   }
-  if (lip && wall < 1.6) warnings.push('Stacking lip rim overhangs thin walls; wall ≥ 1.8 mm recommended.');
+  if (lip && wall < 1.8) warnings.push('Stacking lip rim overhangs the cavity slightly on walls under 1.8 mm.');
   const grooveInnerInset = rimOuterInset + rimW + CLR;
 
   const parts = [];

@@ -29,8 +29,6 @@ behavior-preserving.
 - `nextSpot` returns `(0, 0)` when no candidate fits, so a `+` add on a full
   drawer drops the new tray at the origin, overlapping whatever is there
   (which then gets flagged red by `layoutIssues`).
-- The thin-wall stacking-lip warning triggers at `wall < 1.6` but its text
-  recommends "wall ≥ 1.8 mm" — gate and message disagree slightly.
 - `parseState` silently caps a shared layout at 24 trays.
 - The tray X/Y number inputs clamp to ≥ 0 but not to the envelope, so typed
   positions can push a tray outside (flagged as a layout issue, not

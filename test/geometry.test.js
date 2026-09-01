@@ -128,6 +128,15 @@ test('corner-wall guard rounds corner compartments and keeps the wall', () => {
   assert.ok(thickness < 3, `probe measured something other than the corner wall: ${thickness.toFixed(3)} mm`);
 });
 
+test('thin-wall lip warning gates at wall < 1.8', () => {
+  const lipWarnings = (p) => buildParts(p).warnings.filter((w) => w.includes('Stacking lip rim overhangs'));
+  assert.equal(lipWarnings(PRESETS.trayA).length, 0, 'no warning at wall 2.0');
+  const thin = lipWarnings({ ...PRESETS.trayA, wall: 1.7 });
+  assert.equal(thin.length, 1);
+  assert.equal(thin[0], 'Stacking lip rim overhangs the cavity slightly on walls under 1.8 mm.');
+  assert.equal(lipWarnings({ ...PRESETS.trayA, lip: false, wall: 1.7 }).length, 0, 'lip off never warns');
+});
+
 test('error paths', () => {
   const tiny = buildParts({ width: 40, depth: 60, height: 30, cols: 12, rows: 1, wall: 1.6, floor: 2, divider: 1.2, radius: 0, radiusIn: 0 });
   assert.match(tiny.error, /under 3 mm/);
