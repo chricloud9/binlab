@@ -1,7 +1,6 @@
 # BinLab — parametric bin & drawer organizer generator
 
 ![BinLab screenshot](docs/screenshot.png)
-<!-- TODO: add docs/screenshot.png (drawer mode with a few trays shows the app best) -->
 
 Free, browser-based generator for 3D-printable storage bins and full drawer layouts.
 Live 3D preview, watertight binary STL export, no account, no server — the built app
