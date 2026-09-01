@@ -311,9 +311,9 @@ function updateScene() {
     }
     setTrayHighlight(t.group, drawer.on && i === sel);
   });
-  const issues = drawer.on ? layoutIssues(trays, u) : [];
+  const { issues, bad } = drawer.on ? layoutIssues(trays, u) : { issues: [], bad: {} };
   if (drawer.on) trays.forEach((t, i) => {
-    if (!issues.bad || !issues.bad[i] || !t.group) return;
+    if (!bad[i] || !t.group) return;
     const h = t.meta ? t.meta.totalH : t.p.height;
     const box = makeWarnBox(t.p.width, t.p.depth, h);
     box.position.copy(t.group.position); box.position.z = h / 2;

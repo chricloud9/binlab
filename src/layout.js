@@ -122,11 +122,11 @@ export function emptyRectAt(trays, env, px, py) {
 
 /**
  * Human-readable layout problems: trays outside the envelope and pairwise
- * overlaps. The returned array also carries a `bad` map of offending tray
- * indices (used for the red warning cages).
+ * overlaps, plus a map of offending tray indices (used for the red warning
+ * cages).
  * @param {Array<object>} trays
  * @param {{w: number, d: number}} env usable envelope
- * @returns {string[] & {bad: Object<number, 1>}}
+ * @returns {{issues: string[], bad: Object<number, 1>}}
  */
 export function layoutIssues(trays, env) {
   const issues = [];
@@ -145,8 +145,7 @@ export function layoutIssues(trays, env) {
       bad[a] = 1; bad[b] = 1;
     }
   }
-  issues.bad = bad;
-  return issues;
+  return { issues, bad };
 }
 
 /**

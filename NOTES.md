@@ -21,8 +21,6 @@ behavior-preserving.
 - Drawer dimension inputs: clearing `dw`/`dd` falls back to the previous
   value (`parseFloat(...) || drawer.w`), but clearing `dclr` falls back to
   `0`. Inconsistent, kept.
-- `layoutIssues` returns an array with a `bad` index-map property attached
-  (array/object hybrid). Kept, since the app uses both parts.
 - `deleteTray` keeps the numeric selection index, so deleting a tray that
   comes before the selected one moves the selection to the next tray rather
   than following the originally selected tray.

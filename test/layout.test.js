@@ -60,14 +60,13 @@ test('emptyRectAt: inside a tray, L-shaped void, and slivers', () => {
 test('layoutIssues: overlap pairs and envelope violations with tray indices', () => {
   const env = { w: 338, d: 330.5 };
   const trays = [mk(0, 0, 196, 106), mk(150, 0, 196, 106), mk(200, 300, 100, 100)];
-  const issues = layoutIssues(trays, env);
+  const { issues, bad } = layoutIssues(trays, env);
   assert.ok(issues.some((s) => s.includes('T1 overlaps T2')), issues.join('; '));
   assert.ok(issues.some((s) => s.startsWith('T3 exceeds the usable envelope')), issues.join('; '));
-  assert.deepEqual(issues.bad, { 0: 1, 1: 1, 2: 1 });
+  assert.deepEqual(bad, { 0: 1, 1: 1, 2: 1 });
 
   const clean = layoutIssues([mk(0, 0, 100, 100)], env);
-  assert.equal(clean.length, 0);
-  assert.deepEqual(clean.bad, {});
+  assert.deepEqual(clean, { issues: [], bad: {} });
 });
 
 test('state round-trip and malformed hashes', () => {

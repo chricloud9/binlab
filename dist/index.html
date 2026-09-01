@@ -709,11 +709,11 @@ function emptyRectAt(trays, env, px, py) {
 
 /**
  * Human-readable layout problems: trays outside the envelope and pairwise
- * overlaps. The returned array also carries a `bad` map of offending tray
- * indices (used for the red warning cages).
+ * overlaps, plus a map of offending tray indices (used for the red warning
+ * cages).
  * @param {Array<object>} trays
  * @param {{w: number, d: number}} env usable envelope
- * @returns {string[] & {bad: Object<number, 1>}}
+ * @returns {{issues: string[], bad: Object<number, 1>}}
  */
 function layoutIssues(trays, env) {
   const issues = [];
@@ -732,8 +732,7 @@ function layoutIssues(trays, env) {
       bad[a] = 1; bad[b] = 1;
     }
   }
-  issues.bad = bad;
-  return issues;
+  return { issues, bad };
 }
 
 /**
@@ -1332,9 +1331,9 @@ function updateScene() {
     }
     setTrayHighlight(t.group, drawer.on && i === sel);
   });
-  const issues = drawer.on ? layoutIssues(trays, u) : [];
+  const { issues, bad } = drawer.on ? layoutIssues(trays, u) : { issues: [], bad: {} };
   if (drawer.on) trays.forEach((t, i) => {
-    if (!issues.bad || !issues.bad[i] || !t.group) return;
+    if (!bad[i] || !t.group) return;
     const h = t.meta ? t.meta.totalH : t.p.height;
     const box = makeWarnBox(t.p.width, t.p.depth, h);
     box.position.copy(t.group.position); box.position.z = h / 2;
