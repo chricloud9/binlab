@@ -4,13 +4,14 @@
 
 import { buildParts, computeStats, exportSTL } from './geometry.js';
 import {
-  fmt, nextSpot, snapAxis, clampToEnvelope, emptyRectAt, layoutIssues,
+  fmt, nextSpot, snapAxis, clampToEnvelope, cellAt, emptyRectAt, layoutIssues,
   serializeState, parseState
 } from './layout.js';
 import {
-  canvas, planePoint, pickTray, setSpin, orbitRotate, orbitZoom, requestRefit,
-  fitView, setDrawerVisuals, showHover, hideHover, disposeGroup, buildTrayGroup,
-  setTrayHighlight, makeWarnBox, setBinColor, resize, startAnimation
+  canvas, planePoint, pickTray, pickTrayPoint, setSpin, orbitRotate, orbitZoom,
+  requestRefit, fitView, setDrawerVisuals, showHover, hideHover, showCellHover,
+  hideCellHover, disposeGroup, buildTrayGroup, setTrayHighlight, makeWarnBox,
+  setBinColor, resize, startAnimation
 } from './viewer.js';
 
 /* ---------------- parameter definitions ---------------- */
@@ -202,6 +203,25 @@ const pointers = new Map();
 let lastPinch = 0;
 let drag = null;
 
+/* compartment hover tooltip: follows the cursor, flips near the stage edges */
+const stageEl = document.getElementById('stage');
+const cellTip = document.getElementById('celltip');
+function showCellTip(e, tray, cell) {
+  document.getElementById('celltip-head').textContent =
+    (drawer.on ? 'T' + (trays.indexOf(tray) + 1) + ' · ' : '') + 'CELL ' + (cell.i + 1) + '×' + (cell.j + 1);
+  document.getElementById('celltip-dims').textContent =
+    fmt(cell.w) + ' × ' + fmt(cell.d) + ' × ' + fmt(cell.h) + ' mm';
+  cellTip.style.display = 'block';
+  const r = stageEl.getBoundingClientRect();
+  let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
+  if (x + cellTip.offsetWidth > r.width - 4) x = e.clientX - r.left - cellTip.offsetWidth - 14;
+  if (y + cellTip.offsetHeight > r.height - 4) y = e.clientY - r.top - cellTip.offsetHeight - 14;
+  cellTip.style.left = x + 'px';
+  cellTip.style.top = y + 'px';
+}
+function hideCellTip() { cellTip.style.display = 'none'; }
+function hideCellUI() { hideCellHover(); hideCellTip(); }
+
 canvas.addEventListener('dblclick', (e) => {
   if (!drawer.on || pickTray(e, trays)) return;
   const uu = usable(), pp = planePoint(e);
@@ -220,6 +240,7 @@ canvas.addEventListener('dblclick', (e) => {
 canvas.addEventListener('pointerdown', (e) => {
   setSpin(false);
   hideHover();
+  hideCellUI();
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   canvas.setPointerCapture(e.pointerId);
   if (pointers.size === 2 && drag) { drag = null; updateScene(); }
@@ -237,8 +258,15 @@ canvas.addEventListener('pointerdown', (e) => {
   }
 });
 canvas.addEventListener('pointermove', (e) => {
-  if (pointers.size === 0 && drawer.on) {
-    if (pickTray(e, trays)) { canvas.style.cursor = 'move'; hideHover(); return; }
+  if (pointers.size === 0) {
+    // compartment hover: highlight the cell under the cursor and show its
+    // internal dimensions; takes priority over the empty-space highlight
+    const hit = pickTrayPoint(e, trays);
+    const cell = hit && hit.tray.meta ? cellAt(hit.tray.meta.cells, hit.x, hit.y) : null;
+    if (cell) { showCellHover(hit.tray, cell); showCellTip(e, hit.tray, cell); }
+    else hideCellUI();
+    if (!drawer.on) { hideHover(); return; }
+    if (hit) { canvas.style.cursor = 'move'; hideHover(); return; }
     const hp = planePoint(e);
     const hu = usable();
     const hr = hp ? emptyRectAt(trays, hu, hp.mx + hu.w / 2, hp.my + hu.d / 2) : null;
@@ -246,7 +274,6 @@ canvas.addEventListener('pointermove', (e) => {
     else { canvas.style.cursor = ''; hideHover(); }
     return;
   }
-  if (pointers.size === 0) { hideHover(); return; }
   if (!pointers.has(e.pointerId)) return;
   const prev = pointers.get(e.pointerId);
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -280,7 +307,7 @@ function endPointer(e) {
   pointers.delete(e.pointerId); lastPinch = 0;
   if (drag) { drag = null; updateScene(); }
 }
-canvas.addEventListener('pointerleave', () => { hideHover(); });
+canvas.addEventListener('pointerleave', () => { hideHover(); hideCellUI(); });
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('wheel', (e) => {
@@ -311,6 +338,7 @@ function rebuildTray(i) {
 function updateScene() {
   const u = usable();
   if (!drawer.on) hideHover();
+  hideCellUI(); // the scene changed under the cursor; the next move re-shows it
   // positions + visibility + selection edges + warn boxes
   trays.forEach((t, i) => {
     disposeGroup(t.warnBox); t.warnBox = null;

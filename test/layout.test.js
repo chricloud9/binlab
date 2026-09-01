@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  overlapsAny, nextSpot, snapAxis, clampToEnvelope, emptyRectAt, layoutIssues,
-  serializeState, parseState
+  overlapsAny, nextSpot, snapAxis, clampToEnvelope, cellAt, emptyRectAt,
+  layoutIssues, serializeState, parseState
 } from '../src/layout.js';
 
 const mk = (x, y, width, depth) => ({ x, y, p: { width, depth } });
@@ -47,6 +47,19 @@ test('clampToEnvelope: envelope bounds and 0.5 mm grid, same rule as dragging', 
   assert.equal(clampToEnvelope(500, 100, 338), 238, 'past the far edge -> span - size');
   assert.equal(clampToEnvelope(120.3, 100, 338), 120.5, 'snaps to 0.5 mm');
   assert.equal(clampToEnvelope(50, 400, 338), 0, 'tray larger than the envelope pins to 0');
+});
+
+test('cellAt: cavity hit, divider and outer wall are null', () => {
+  // 100 x 80 tray, wall 2, divider 2, 2 x 1 grid: cavities 47 x 76 at cx ±24.5
+  const cells = [
+    { i: 0, j: 0, cx: -24.5, cy: 0, w: 47, d: 76, h: 30 },
+    { i: 1, j: 0, cx: 24.5, cy: 0, w: 47, d: 76, h: 30 }
+  ];
+  assert.equal(cellAt(cells, -24.5, 0), cells[0], 'center of the left cavity');
+  assert.equal(cellAt(cells, 24.5, 30), cells[1], 'inside the right cavity');
+  assert.equal(cellAt(cells, 0, 0), null, 'point on the divider');
+  assert.equal(cellAt(cells, -49, 0), null, 'point on the outer wall');
+  assert.equal(cellAt(cells, 0, 39), null, 'outside the cavities in y');
 });
 
 test('emptyRectAt: inside a tray, L-shaped void, and slivers', () => {

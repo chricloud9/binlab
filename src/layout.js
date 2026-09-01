@@ -53,6 +53,23 @@ export function nextSpot(trays, env, w, d) {
 }
 
 /**
+ * The compartment whose footprint contains a point, in tray-local model
+ * coordinates (origin at the tray center). Bounds are strict, so a point on
+ * a divider or the outer wall belongs to no cell.
+ * @param {Array<{i: number, j: number, cx: number, cy: number,
+ *   w: number, d: number, h: number}>} cells from buildParts meta.cells
+ * @param {number} x @param {number} y
+ * @returns {object|null} the cell, or null between/outside compartments
+ */
+export function cellAt(cells, x, y) {
+  for (let k = 0; k < cells.length; k++) {
+    const c = cells[k];
+    if (Math.abs(x - c.cx) < c.w / 2 && Math.abs(y - c.cy) < c.d / 2) return c;
+  }
+  return null;
+}
+
+/**
  * Clamp a tray position into the envelope on one axis and snap it to the
  * 0.5 mm grid — the same rule dragging uses, shared by the typed X/Y inputs.
  * @param {number} v proposed position on the axis

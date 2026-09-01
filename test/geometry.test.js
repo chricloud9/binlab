@@ -128,6 +128,25 @@ test('corner-wall guard rounds corner compartments and keeps the wall', () => {
   assert.ok(thickness < 3, `probe measured something other than the corner wall: ${thickness.toFixed(3)} mm`);
 });
 
+test('meta.cells enumerates compartments row-major with cavity dims', () => {
+  const p = PRESETS.smallTray; // 3 x 2 grid
+  const { meta } = buildParts(p);
+  assert.equal(meta.cells.length, p.cols * p.rows);
+  meta.cells.forEach((c) => {
+    assert.equal(c.w, meta.cavW);
+    assert.equal(c.d, meta.cavD);
+    assert.equal(c.h, meta.cavH);
+  });
+  // row-major: the first row runs across the columns
+  assert.deepEqual(meta.cells.map((c) => [c.i, c.j]).slice(0, 4), [[0, 0], [1, 0], [2, 0], [0, 1]]);
+  // corner cells sit at ±(outer half - wall - half cavity)
+  const ex = p.width / 2 - p.wall - meta.cavW / 2;
+  const ey = p.depth / 2 - p.wall - meta.cavD / 2;
+  const first = meta.cells[0], last = meta.cells[meta.cells.length - 1];
+  assert.ok(Math.abs(first.cx + ex) < 1e-9 && Math.abs(first.cy + ey) < 1e-9, 'front-left corner cell');
+  assert.ok(Math.abs(last.cx - ex) < 1e-9 && Math.abs(last.cy - ey) < 1e-9, 'back-right corner cell');
+});
+
 test('thin-wall lip warning gates at wall < 1.8', () => {
   const lipWarnings = (p) => buildParts(p).warnings.filter((w) => w.includes('Stacking lip rim overhangs'));
   assert.equal(lipWarnings(PRESETS.trayA).length, 0, 'no warning at wall 2.0');

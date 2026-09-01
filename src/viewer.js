@@ -58,18 +58,34 @@ export function planePoint(e) {
 }
 
 /**
- * Raycast a pointer event against the visible tray meshes.
+ * Raycast a pointer event against the visible tray meshes and return the hit
+ * in tray-local model coordinates (z-up, origin at the tray center) — the
+ * space meta.cells lives in. Pointing into a cavity hits the floor surface;
+ * a wall-top hit lands between cell footprints.
  * @param {Array<object>} trays tray list (each with a .group)
- * @returns {object|null} the hit tray
+ * @returns {{tray: object, x: number, y: number}|null}
  */
-export function pickTray(e, trays) {
+export function pickTrayPoint(e, trays) {
   raycaster.setFromCamera(pointerNDC(e), camera);
   const meshes = [];
   trays.forEach((t) => {
     if (t.group && t.group.visible) t.group.traverse((o) => { if (o.isMesh) meshes.push(o); });
   });
   const hits = raycaster.intersectObjects(meshes, false);
-  return hits.length ? hits[0].object.userData.tray : null;
+  if (!hits.length) return null;
+  const tray = hits[0].object.userData.tray;
+  const local = tray.group.worldToLocal(hits[0].point.clone());
+  return { tray, x: local.x, y: local.y };
+}
+
+/**
+ * Raycast a pointer event against the visible tray meshes.
+ * @param {Array<object>} trays tray list (each with a .group)
+ * @returns {object|null} the hit tray
+ */
+export function pickTray(e, trays) {
+  const hit = pickTrayPoint(e, trays);
+  return hit ? hit.tray : null;
 }
 
 /** Enable or pause the idle turntable spin. */
@@ -212,6 +228,37 @@ export function showHover(r, env) {
 
 /** Hide the empty-space hover highlight. */
 export function hideHover() { if (hoverGroup) hoverGroup.visible = false; }
+
+let cellHoverGroup = null;
+const ensureCellHover = () => {
+  if (cellHoverGroup) return;
+  cellHoverGroup = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }));
+  const pts = [new THREE.Vector3(-0.5, -0.5, 0), new THREE.Vector3(0.5, -0.5, 0),
+               new THREE.Vector3(0.5, 0.5, 0), new THREE.Vector3(-0.5, 0.5, 0), new THREE.Vector3(-0.5, -0.5, 0)];
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0.5 }));
+  cellHoverGroup.add(m); cellHoverGroup.add(line);
+  cellHoverGroup.visible = false;
+  world.add(cellHoverGroup);
+};
+
+/**
+ * Highlight one compartment of a tray (pale gold plane just above its floor).
+ * @param {object} tray tray whose group carries the world offset
+ * @param {{cx: number, cy: number, w: number, d: number}} cell from meta.cells
+ */
+export function showCellHover(tray, cell) {
+  ensureCellHover();
+  const g = tray.group.position;
+  cellHoverGroup.visible = true;
+  cellHoverGroup.position.set(g.x + cell.cx, g.y + cell.cy, tray.p.floor + 0.1);
+  cellHoverGroup.scale.set(cell.w, cell.d, 1);
+}
+
+/** Hide the compartment hover highlight. */
+export function hideCellHover() { if (cellHoverGroup) cellHoverGroup.visible = false; }
 
 /** Match the renderer and camera to the stage size. */
 export function resize() {

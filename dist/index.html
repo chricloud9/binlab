@@ -86,6 +86,11 @@ input[type=color]{width:34px;height:22px;border:1px solid var(--line);border-rad
 #warns div{font-size:10px;letter-spacing:.04em;color:#ffd9c4;background:rgba(120,46,14,.55);border:1px solid rgba(255,180,140,.5);padding:4px 8px;border-radius:2px}
 #err{position:absolute;left:14px;bottom:14px;font-size:11px;color:#ffd9c4;background:rgba(120,46,14,.7);border:1px solid rgba(255,180,140,.6);padding:6px 10px;border-radius:2px;display:none;max-width:70%}
 
+/* compartment hover tooltip — same drawing-sheet look as the title block */
+#celltip{position:absolute;left:0;top:0;display:none;pointer-events:none;z-index:3;border:1px solid var(--sheet-line);color:var(--sheet-line);background:rgba(16,44,70,.7);backdrop-filter:blur(2px);font-size:10px;letter-spacing:.05em;padding:4px 8px;white-space:nowrap}
+#celltip-head{font-weight:600;letter-spacing:.14em;margin-bottom:2px}
+#celltip-dims{font-variant-numeric:tabular-nums}
+
 @media (max-width:760px){
   body{overflow:auto}
   main{flex-direction:column}
@@ -149,6 +154,7 @@ input[type=color]{width:34px;height:22px;border:1px solid var(--line);border-rad
   <div id="stage">
     <div id="warns"></div>
     <div id="err"></div>
+    <div id="celltip" aria-hidden="true"><div id="celltip-head"></div><div id="celltip-dims"></div></div>
     <div id="tblock" aria-live="polite">
       <div class="tb-head"><span>PARAMETRIC BIN</span><span>UNITS&nbsp;MM</span></div>
       <table>
@@ -491,11 +497,19 @@ function buildParts(p) {
     }
   }
 
+  // compartment footprints for hover hit-testing, row-major (metadata only —
+  // must never affect the emitted geometry)
+  const cells = [];
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    cells.push({ i, j, cx: xs[i], cy: ys[j], w: cavW, d: cavD, h: H - floor });
+  }
+
   return {
     parts,
     warnings,
     meta: {
       cavW, cavD, cavH: H - floor,
+      cells,
       compartments: cols * rows,
       totalH: H + (lip ? RIM_H : 0),
       lip
@@ -637,6 +651,23 @@ function nextSpot(trays, env, w, d) {
     if (!best || c.y < best.y - 0.01 || (Math.abs(c.y - best.y) < 0.01 && c.x < best.x)) best = c;
   });
   return best ? { x: Math.round(best.x * 2) / 2, y: Math.round(best.y * 2) / 2 } : null;
+}
+
+/**
+ * The compartment whose footprint contains a point, in tray-local model
+ * coordinates (origin at the tray center). Bounds are strict, so a point on
+ * a divider or the outer wall belongs to no cell.
+ * @param {Array<{i: number, j: number, cx: number, cy: number,
+ *   w: number, d: number, h: number}>} cells from buildParts meta.cells
+ * @param {number} x @param {number} y
+ * @returns {object|null} the cell, or null between/outside compartments
+ */
+function cellAt(cells, x, y) {
+  for (let k = 0; k < cells.length; k++) {
+    const c = cells[k];
+    if (Math.abs(x - c.cx) < c.w / 2 && Math.abs(y - c.cy) < c.d / 2) return c;
+  }
+  return null;
 }
 
 /**
@@ -854,18 +885,34 @@ function planePoint(e) {
 }
 
 /**
- * Raycast a pointer event against the visible tray meshes.
+ * Raycast a pointer event against the visible tray meshes and return the hit
+ * in tray-local model coordinates (z-up, origin at the tray center) — the
+ * space meta.cells lives in. Pointing into a cavity hits the floor surface;
+ * a wall-top hit lands between cell footprints.
  * @param {Array<object>} trays tray list (each with a .group)
- * @returns {object|null} the hit tray
+ * @returns {{tray: object, x: number, y: number}|null}
  */
-function pickTray(e, trays) {
+function pickTrayPoint(e, trays) {
   raycaster.setFromCamera(pointerNDC(e), camera);
   const meshes = [];
   trays.forEach((t) => {
     if (t.group && t.group.visible) t.group.traverse((o) => { if (o.isMesh) meshes.push(o); });
   });
   const hits = raycaster.intersectObjects(meshes, false);
-  return hits.length ? hits[0].object.userData.tray : null;
+  if (!hits.length) return null;
+  const tray = hits[0].object.userData.tray;
+  const local = tray.group.worldToLocal(hits[0].point.clone());
+  return { tray, x: local.x, y: local.y };
+}
+
+/**
+ * Raycast a pointer event against the visible tray meshes.
+ * @param {Array<object>} trays tray list (each with a .group)
+ * @returns {object|null} the hit tray
+ */
+function pickTray(e, trays) {
+  const hit = pickTrayPoint(e, trays);
+  return hit ? hit.tray : null;
 }
 
 /** Enable or pause the idle turntable spin. */
@@ -1008,6 +1055,37 @@ function showHover(r, env) {
 
 /** Hide the empty-space hover highlight. */
 function hideHover() { if (hoverGroup) hoverGroup.visible = false; }
+
+let cellHoverGroup = null;
+const ensureCellHover = () => {
+  if (cellHoverGroup) return;
+  cellHoverGroup = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }));
+  const pts = [new THREE.Vector3(-0.5, -0.5, 0), new THREE.Vector3(0.5, -0.5, 0),
+               new THREE.Vector3(0.5, 0.5, 0), new THREE.Vector3(-0.5, 0.5, 0), new THREE.Vector3(-0.5, -0.5, 0)];
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0.5 }));
+  cellHoverGroup.add(m); cellHoverGroup.add(line);
+  cellHoverGroup.visible = false;
+  world.add(cellHoverGroup);
+};
+
+/**
+ * Highlight one compartment of a tray (pale gold plane just above its floor).
+ * @param {object} tray tray whose group carries the world offset
+ * @param {{cx: number, cy: number, w: number, d: number}} cell from meta.cells
+ */
+function showCellHover(tray, cell) {
+  ensureCellHover();
+  const g = tray.group.position;
+  cellHoverGroup.visible = true;
+  cellHoverGroup.position.set(g.x + cell.cx, g.y + cell.cy, tray.p.floor + 0.1);
+  cellHoverGroup.scale.set(cell.w, cell.d, 1);
+}
+
+/** Hide the compartment hover highlight. */
+function hideCellHover() { if (cellHoverGroup) cellHoverGroup.visible = false; }
 
 /** Match the renderer and camera to the stage size. */
 function resize() {
@@ -1235,6 +1313,25 @@ const pointers = new Map();
 let lastPinch = 0;
 let drag = null;
 
+/* compartment hover tooltip: follows the cursor, flips near the stage edges */
+const stageEl = document.getElementById('stage');
+const cellTip = document.getElementById('celltip');
+function showCellTip(e, tray, cell) {
+  document.getElementById('celltip-head').textContent =
+    (drawer.on ? 'T' + (trays.indexOf(tray) + 1) + ' · ' : '') + 'CELL ' + (cell.i + 1) + '×' + (cell.j + 1);
+  document.getElementById('celltip-dims').textContent =
+    fmt(cell.w) + ' × ' + fmt(cell.d) + ' × ' + fmt(cell.h) + ' mm';
+  cellTip.style.display = 'block';
+  const r = stageEl.getBoundingClientRect();
+  let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
+  if (x + cellTip.offsetWidth > r.width - 4) x = e.clientX - r.left - cellTip.offsetWidth - 14;
+  if (y + cellTip.offsetHeight > r.height - 4) y = e.clientY - r.top - cellTip.offsetHeight - 14;
+  cellTip.style.left = x + 'px';
+  cellTip.style.top = y + 'px';
+}
+function hideCellTip() { cellTip.style.display = 'none'; }
+function hideCellUI() { hideCellHover(); hideCellTip(); }
+
 canvas.addEventListener('dblclick', (e) => {
   if (!drawer.on || pickTray(e, trays)) return;
   const uu = usable(), pp = planePoint(e);
@@ -1253,6 +1350,7 @@ canvas.addEventListener('dblclick', (e) => {
 canvas.addEventListener('pointerdown', (e) => {
   setSpin(false);
   hideHover();
+  hideCellUI();
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   canvas.setPointerCapture(e.pointerId);
   if (pointers.size === 2 && drag) { drag = null; updateScene(); }
@@ -1270,8 +1368,15 @@ canvas.addEventListener('pointerdown', (e) => {
   }
 });
 canvas.addEventListener('pointermove', (e) => {
-  if (pointers.size === 0 && drawer.on) {
-    if (pickTray(e, trays)) { canvas.style.cursor = 'move'; hideHover(); return; }
+  if (pointers.size === 0) {
+    // compartment hover: highlight the cell under the cursor and show its
+    // internal dimensions; takes priority over the empty-space highlight
+    const hit = pickTrayPoint(e, trays);
+    const cell = hit && hit.tray.meta ? cellAt(hit.tray.meta.cells, hit.x, hit.y) : null;
+    if (cell) { showCellHover(hit.tray, cell); showCellTip(e, hit.tray, cell); }
+    else hideCellUI();
+    if (!drawer.on) { hideHover(); return; }
+    if (hit) { canvas.style.cursor = 'move'; hideHover(); return; }
     const hp = planePoint(e);
     const hu = usable();
     const hr = hp ? emptyRectAt(trays, hu, hp.mx + hu.w / 2, hp.my + hu.d / 2) : null;
@@ -1279,7 +1384,6 @@ canvas.addEventListener('pointermove', (e) => {
     else { canvas.style.cursor = ''; hideHover(); }
     return;
   }
-  if (pointers.size === 0) { hideHover(); return; }
   if (!pointers.has(e.pointerId)) return;
   const prev = pointers.get(e.pointerId);
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1313,7 +1417,7 @@ function endPointer(e) {
   pointers.delete(e.pointerId); lastPinch = 0;
   if (drag) { drag = null; updateScene(); }
 }
-canvas.addEventListener('pointerleave', () => { hideHover(); });
+canvas.addEventListener('pointerleave', () => { hideHover(); hideCellUI(); });
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('wheel', (e) => {
@@ -1344,6 +1448,7 @@ function rebuildTray(i) {
 function updateScene() {
   const u = usable();
   if (!drawer.on) hideHover();
+  hideCellUI(); // the scene changed under the cursor; the next move re-shows it
   // positions + visibility + selection edges + warn boxes
   trays.forEach((t, i) => {
     disposeGroup(t.warnBox); t.warnBox = null;

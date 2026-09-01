@@ -317,11 +317,19 @@ export function buildParts(p) {
     }
   }
 
+  // compartment footprints for hover hit-testing, row-major (metadata only —
+  // must never affect the emitted geometry)
+  const cells = [];
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    cells.push({ i, j, cx: xs[i], cy: ys[j], w: cavW, d: cavD, h: H - floor });
+  }
+
   return {
     parts,
     warnings,
     meta: {
       cavW, cavD, cavH: H - floor,
+      cells,
       compartments: cols * rows,
       totalH: H + (lip ? RIM_H : 0),
       lip
