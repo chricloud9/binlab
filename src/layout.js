@@ -35,7 +35,7 @@ export function overlapsAny(trays, x, y, w, d, self) {
  * @param {Array<object>} trays
  * @param {{w: number, d: number}} env usable envelope
  * @param {number} w @param {number} d
- * @returns {{x: number, y: number}} snapped to 0.5 mm; (0,0) if nothing fits
+ * @returns {{x: number, y: number}|null} snapped to 0.5 mm; null if nothing fits
  */
 export function nextSpot(trays, env, w, d) {
   const cands = [{ x: 0, y: 0 }];
@@ -49,7 +49,7 @@ export function nextSpot(trays, env, w, d) {
     if (overlapsAny(trays, c.x, c.y, w, d, null)) return;
     if (!best || c.y < best.y - 0.01 || (Math.abs(c.y - best.y) < 0.01 && c.x < best.x)) best = c;
   });
-  return best ? { x: Math.round(best.x * 2) / 2, y: Math.round(best.y * 2) / 2 } : { x: 0, y: 0 };
+  return best ? { x: Math.round(best.x * 2) / 2, y: Math.round(best.y * 2) / 2 } : null;
 }
 
 /**

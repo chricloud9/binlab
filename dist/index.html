@@ -622,7 +622,7 @@ function overlapsAny(trays, x, y, w, d, self) {
  * @param {Array<object>} trays
  * @param {{w: number, d: number}} env usable envelope
  * @param {number} w @param {number} d
- * @returns {{x: number, y: number}} snapped to 0.5 mm; (0,0) if nothing fits
+ * @returns {{x: number, y: number}|null} snapped to 0.5 mm; null if nothing fits
  */
 function nextSpot(trays, env, w, d) {
   const cands = [{ x: 0, y: 0 }];
@@ -636,7 +636,7 @@ function nextSpot(trays, env, w, d) {
     if (overlapsAny(trays, c.x, c.y, w, d, null)) return;
     if (!best || c.y < best.y - 0.01 || (Math.abs(c.y - best.y) < 0.01 && c.x < best.x)) best = c;
   });
-  return best ? { x: Math.round(best.x * 2) / 2, y: Math.round(best.y * 2) / 2 } : { x: 0, y: 0 };
+  return best ? { x: Math.round(best.x * 2) / 2, y: Math.round(best.y * 2) / 2 } : null;
 }
 
 /**
@@ -1146,8 +1146,16 @@ function renderTrayBar() {
   document.getElementById('posrow').className = 'duo' + (drawer.on ? '' : ' dim');
 }
 
+let addTrayWarn = null, addTrayWarnT = null;
 function addTray(p) {
   const spot = nextSpot(trays, usable(), p.width, p.depth);
+  if (!spot) {
+    addTrayWarn = 'No free spot for a ' + fmt(p.width) + ' × ' + fmt(p.depth) + ' mm tray — clear space or enlarge the drawer.';
+    clearTimeout(addTrayWarnT);
+    addTrayWarnT = setTimeout(() => { addTrayWarn = null; updateScene(); }, 4000);
+    updateScene();
+    return;
+  }
   trays.push(makeTray(spot.x, spot.y, p));
   sel = trays.length - 1;
   writeInputs(trays[sel]); renderTrayBar(); rebuildTray(sel);
@@ -1371,7 +1379,7 @@ function updateScene() {
   // warnings
   const w = document.getElementById('warns');
   w.innerHTML = '';
-  (st.gwarn || []).concat(issues).forEach((txt) => {
+  (st.gwarn || []).concat(issues, addTrayWarn ? [addTrayWarn] : []).forEach((txt) => {
     const d = document.createElement('div'); d.textContent = txt; w.appendChild(d);
   });
   updateFit();

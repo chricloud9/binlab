@@ -26,9 +26,6 @@ behavior-preserving.
 - `deleteTray` keeps the numeric selection index, so deleting a tray that
   comes before the selected one moves the selection to the next tray rather
   than following the originally selected tray.
-- `nextSpot` returns `(0, 0)` when no candidate fits, so a `+` add on a full
-  drawer drops the new tray at the origin, overlapping whatever is there
-  (which then gets flagged red by `layoutIssues`).
 - `parseState` silently caps a shared layout at 24 trays.
 - The tray X/Y number inputs clamp to ≥ 0 but not to the envelope, so typed
   positions can push a tray outside (flagged as a layout issue, not

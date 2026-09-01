@@ -24,6 +24,12 @@ test('nextSpot: wraps below when the row is full, fills the row when it fits', (
   assert.deepEqual(nextSpot(trays, env, 142, 106), { x: 196, y: 0 });
 });
 
+test('nextSpot: null when nothing fits', () => {
+  const full = [mk(0, 0, 200, 100)];
+  assert.equal(nextSpot(full, { w: 200, d: 100 }, 100, 50), null, 'envelope fully occupied');
+  assert.equal(nextSpot([], { w: 200, d: 100 }, 300, 50), null, 'tray wider than the envelope');
+});
+
 test('snapAxis: butt, align, and envelope snaps within 4 mm only', () => {
   const trays = [mk(50, 0, 100, 100)];
   const span = 338, size = 60;

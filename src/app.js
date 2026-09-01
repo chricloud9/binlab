@@ -125,8 +125,16 @@ function renderTrayBar() {
   document.getElementById('posrow').className = 'duo' + (drawer.on ? '' : ' dim');
 }
 
+let addTrayWarn = null, addTrayWarnT = null;
 function addTray(p) {
   const spot = nextSpot(trays, usable(), p.width, p.depth);
+  if (!spot) {
+    addTrayWarn = 'No free spot for a ' + fmt(p.width) + ' × ' + fmt(p.depth) + ' mm tray — clear space or enlarge the drawer.';
+    clearTimeout(addTrayWarnT);
+    addTrayWarnT = setTimeout(() => { addTrayWarn = null; updateScene(); }, 4000);
+    updateScene();
+    return;
+  }
   trays.push(makeTray(spot.x, spot.y, p));
   sel = trays.length - 1;
   writeInputs(trays[sel]); renderTrayBar(); rebuildTray(sel);
@@ -350,7 +358,7 @@ function updateScene() {
   // warnings
   const w = document.getElementById('warns');
   w.innerHTML = '';
-  (st.gwarn || []).concat(issues).forEach((txt) => {
+  (st.gwarn || []).concat(issues, addTrayWarn ? [addTrayWarn] : []).forEach((txt) => {
     const d = document.createElement('div'); d.textContent = txt; w.appendChild(d);
   });
   updateFit();
