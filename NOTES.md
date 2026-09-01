@@ -18,4 +18,3 @@ behavior-preserving.
 
 ## Latent quirks, preserved verbatim
 
-- `parseState` silently caps a shared layout at 24 trays.

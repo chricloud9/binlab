@@ -782,6 +782,8 @@ function parseState(hash, defaults) {
       drawer.d = +s.d.d || drawer.d;
       drawer.clr = (+s.d.clr >= 0) ? +s.d.clr : drawer.clr;
     }
+    // hard cap: a hand-edited or hostile hash must not create an unbounded
+    // number of trays (each one costs a full geometry rebuild)
     const trays = s.t.slice(0, 24).map((t) => {
       const p = Object.assign({}, defaults.params);
       Object.keys(p).forEach((k) => { if (t.p && t.p[k] !== undefined) p[k] = t.p[k]; });
