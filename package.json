@@ -4,6 +4,9 @@
   "description": "Browser-based parametric generator for 3D-printable storage bins and drawer organizers",
   "type": "module",
   "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.js"
+  },
   "devDependencies": {
     "three": "0.128.0"
   }

@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BinLab — parametric bin &amp; drawer organizer generator</title>
+<meta name="description" content="Free parametric drawer organizer and bin generator. Live 3D preview, multi-tray drawer layout planning, stacking lips, chamfers, watertight STL export. Runs entirely in your browser, no account.">
+<meta property="og:title" content="BinLab — parametric bin &amp; drawer organizer generator">
+<meta property="og:description" content="Design custom 3D-printable storage trays: exact dimensions, stacking lips, drawer layouts, free STL export.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1c2530; --ink-soft:#4a5560;
+  --panel:#f1f2f3; --panel-2:#e7e9eb; --line:#cfd4d8;
+  --blue:#1e4e79; --blue-deep:#16395a;
+  --sheet-line:rgba(224,236,246,.85);
+  --ok:#2c7a52; --warn:#b54a1e;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --disp:'Space Grotesk',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--panel);color:var(--ink);font-family:var(--mono);font-size:13px;display:flex;flex-direction:column;overflow:hidden}
+
+/* header */
+header{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.mark{display:flex;flex-direction:column;line-height:1.05;margin-right:4px}
+.mark b{font-family:var(--disp);font-weight:700;font-size:19px;letter-spacing:.04em}
+.mark span{font-size:9px;letter-spacing:.22em;color:var(--ink-soft);margin-top:2px}
+.presets{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.presets button{font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:5px 9px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;border-radius:3px}
+.presets button:hover{border-color:var(--blue);color:var(--blue)}
+.presets button.active{background:var(--blue);border-color:var(--blue);color:#fff}
+#dl{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.06em;padding:9px 16px;background:var(--blue);color:#fff;border:none;border-radius:3px;cursor:pointer}
+#dl:hover{background:var(--blue-deep)}
+#dl:disabled{background:var(--line);cursor:not-allowed}
+#share{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.06em;padding:8px 14px;background:#fff;color:var(--blue);border:1px solid var(--blue);border-radius:3px;cursor:pointer}
+#share:hover{background:var(--panel-2)}
+
+/* layout */
+main{flex:1;display:flex;min-height:0}
+aside{width:272px;min-width:272px;overflow-y:auto;border-right:1px solid var(--line);background:var(--panel);padding:12px 14px 24px}
+#stage{flex:1;position:relative;background:var(--blue);min-width:0}
+#stage canvas{display:block;touch-action:none;cursor:grab}
+#stage canvas:active{cursor:grabbing}
+
+/* controls */
+fieldset{border:none;margin:0 0 14px}
+legend{font-size:9px;font-weight:600;letter-spacing:.24em;color:var(--ink-soft);padding:0 0 7px;text-transform:uppercase}
+.row{display:grid;grid-template-columns:1fr 58px;gap:8px;align-items:center;margin-bottom:3px}
+.row label{grid-column:1/3;font-size:10px;letter-spacing:.06em;color:var(--ink-soft);display:flex;justify-content:space-between}
+.row label em{font-style:normal;color:#9aa3ab}
+input[type=range]{width:100%;accent-color:var(--blue);height:22px}
+input[type=number]{font-family:var(--mono);font-size:12px;width:58px;padding:3px 4px;border:1px solid var(--line);border-radius:3px;background:#fff;color:var(--ink);text-align:right}
+input[type=number]:focus,select:focus,input[type=color]:focus{outline:2px solid var(--blue);outline-offset:1px}
+input[type=range]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.tgl{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:11px;letter-spacing:.04em;cursor:pointer;color:var(--ink)}
+.tgl input{accent-color:var(--blue);width:14px;height:14px;cursor:pointer}
+.tgl small{color:#9aa3ab;font-size:9px;margin-left:auto}
+select{font-family:var(--mono);font-size:11px;width:100%;padding:5px;border:1px solid var(--line);border-radius:3px;background:#fff;color:var(--ink)}
+#fit{font-size:10px;letter-spacing:.04em;margin-top:6px;line-height:1.5}
+#fit.ok{color:var(--ok)} #fit.bad{color:var(--warn)}
+.colorrow{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-soft)}
+input[type=color]{width:34px;height:22px;border:1px solid var(--line);border-radius:3px;background:#fff;padding:1px;cursor:pointer}
+.duo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:4px 0}
+.duo label{display:flex;flex-direction:column;font-size:9px;letter-spacing:.06em;color:var(--ink-soft);gap:2px}
+.duo input[type=number]{width:100%}
+#traybar{display:flex;gap:4px;flex-wrap:wrap;margin:7px 0 3px}
+#traybar button{font-family:var(--mono);font-size:10px;padding:4px 8px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;border-radius:3px}
+#traybar button.active{background:var(--blue);border-color:var(--blue);color:#fff}
+#traybar button.act{color:var(--blue);border-color:var(--blue);background:#fff}
+#traybar button:disabled{opacity:.35;cursor:not-allowed}
+.dim{opacity:.4;pointer-events:none}
+.note{font-size:9px;line-height:1.6;color:#9aa3ab;border-top:1px solid var(--line);padding-top:10px}
+
+/* title block — engineering drawing corner */
+#tblock{position:absolute;right:14px;bottom:14px;border:1px solid var(--sheet-line);color:var(--sheet-line);font-size:10px;letter-spacing:.05em;min-width:212px;backdrop-filter:blur(2px);background:rgba(16,44,70,.55)}
+#tblock .tb-head{display:flex;justify-content:space-between;border-bottom:1px solid var(--sheet-line);padding:5px 8px;font-weight:600;letter-spacing:.14em}
+#tblock table{border-collapse:collapse;width:100%}
+#tblock td{padding:3px 8px;border-bottom:1px solid rgba(224,236,246,.28)}
+#tblock tr:last-child td{border-bottom:none}
+#tblock td:first-child{opacity:.65;padding-right:14px}
+#tblock td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+#warns{position:absolute;left:14px;top:12px;display:flex;flex-direction:column;gap:5px;max-width:min(420px,80%)}
+#warns div{font-size:10px;letter-spacing:.04em;color:#ffd9c4;background:rgba(120,46,14,.55);border:1px solid rgba(255,180,140,.5);padding:4px 8px;border-radius:2px}
+#err{position:absolute;left:14px;bottom:14px;font-size:11px;color:#ffd9c4;background:rgba(120,46,14,.7);border:1px solid rgba(255,180,140,.6);padding:6px 10px;border-radius:2px;display:none;max-width:70%}
+
+@media (max-width:760px){
+  body{overflow:auto}
+  main{flex-direction:column}
+  #stage{order:0;height:52vh;min-height:320px;flex:none}
+  aside{order:1;width:100%;min-width:0;border-right:none;border-top:1px solid var(--line);overflow:visible}
+  #tblock{min-width:0;right:10px;bottom:10px;font-size:9px}
+  header{gap:10px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="mark"><b>BINLAB</b><span>BIN &amp; TRAY GENERATOR</span></div>
+  <div class="presets" id="presets" role="group" aria-label="Presets"></div>
+  <button id="share">Share</button>
+  <button id="dl">Download STL</button>
+</header>
+<main>
+  <aside>
+    <fieldset><legend>Drawer layout</legend>
+      <label class="tgl"><input type="checkbox" id="drawerOn"> drawer mode <small>multi-tray</small></label>
+      <div class="duo" id="drawerDims">
+        <label>drawer W<input type="number" id="dw" min="60" max="1200" step="0.5" value="340"></label>
+        <label>drawer D<input type="number" id="dd" min="60" max="1200" step="0.5" value="332.5"></label>
+        <label>clearance<input type="number" id="dclr" min="0" max="6" step="0.5" value="2"></label>
+      </div>
+      <div id="traybar"></div>
+      <div class="duo" id="posrow">
+        <label>tray X<input type="number" id="px" min="0" max="1200" step="0.5" value="0"></label>
+        <label>tray Y<input type="number" id="py" min="0" max="1200" step="0.5" value="0"></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>Dimensions · mm</legend><div id="c-dims"></div></fieldset>
+    <fieldset><legend>Grid</legend><div id="c-grid"></div></fieldset>
+    <fieldset><legend>Walls &amp; floor · mm</legend><div id="c-walls"></div></fieldset>
+    <fieldset><legend>Style</legend>
+      <div id="c-style"></div>
+      <div class="colorrow"><input type="color" id="binColor" value="#d7d3c8" aria-label="Bin color"><span>bin color</span></div>
+    </fieldset>
+    <fieldset><legend>Features</legend>
+      <label class="tgl"><input type="checkbox" id="f-lip"> stacking lip <small>rim + base groove</small></label>
+      <label class="tgl"><input type="checkbox" id="f-tab"> label tab <small>45° chamfer</small></label>
+      <label class="tgl"><input type="checkbox" id="f-scoops"> finger scoops <small>supportless</small></label>
+      <label class="tgl"><input type="checkbox" id="f-floorHoles"> floor holes <small>saves filament</small></label>
+      <label class="tgl"><input type="checkbox" id="f-floorFillet"> floor fillet <small>molded look</small></label>
+    </fieldset>
+    <fieldset><legend>Printer fit</legend>
+      <select id="printer" aria-label="Printer">
+        <option value="">— select printer —</option>
+        <option value="180,180,180">Bambu A1 mini · 180×180×180</option>
+        <option value="256,256,256">Bambu A1 / P1 / P2S / X1 · 256×256×256</option>
+        <option value="250,210,220">Prusa MK3 / MK4 · 250×210×220</option>
+        <option value="220,220,250">Ender 3 · 220×220×250</option>
+        <option value="330,240,300">Ultimaker S5 · 330×240×300</option>
+        <option value="300,300,300">Large format · 300×300×300</option>
+      </select>
+      <div id="fit"></div>
+    </fieldset>
+    <p class="note">Print flat side down, no supports. 3 perimeters, 10–15% infill, 0.2 mm layers. PETG for large flat inserts (less warp), PLA otherwise. Slicer unions the overlapping shells on import.</p>
+  </aside>
+  <div id="stage">
+    <div id="warns"></div>
+    <div id="err"></div>
+    <div id="tblock" aria-live="polite">
+      <div class="tb-head"><span>PARAMETRIC BIN</span><span>UNITS&nbsp;MM</span></div>
+      <table>
+        <tr id="tbDrawerRow" style="display:none"><td>DRAWER</td><td id="t-drawer">—</td></tr>
+        <tr id="tbTrayRow" style="display:none"><td>TRAY</td><td id="t-tray">—</td></tr>
+        <tr><td>BODY</td><td id="t-body">—</td></tr>
+        <tr><td>CELLS</td><td id="t-cells">—</td></tr>
+        <tr><td>CELL ID</td><td id="t-id">—</td></tr>
+        <tr><td>VOLUME</td><td id="t-vol">—</td></tr>
+        <tr><td>MASS · PLA</td><td id="t-mass">—</td></tr>
+        <tr><td>MESH</td><td id="t-mesh">—</td></tr>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// BinLab — built from src/ by scripts/build.js. Do not edit directly.
+// Module order: geometry.js -> layout.js -> viewer.js -> app.js
+(function () {
+'use strict';
+/* ---- src/geometry.js ---- */
+// BinLab geometry engine. Model space is z-up, mm. All transforms baked into geometry.
+// Pure: no DOM. Expects a global `THREE` (three.js r128) in scope.
+/* global THREE */
+
+const OV = 0.06;   // shell overlap to avoid coincident faces
+const PEN = 0.3;   // penetration of add-on solids into walls/floor
+const SEG = 10;    // curve segments per arc
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// Rounded rect centered on (cx, cy); r is a scalar or per-corner [BL, BR, TR, TL].
+const roundedRect = (cls, w, d, r, cx, cy) => {
+  cx = cx || 0; cy = cy || 0;
+  const rr = Array.isArray(r) ? r.slice() : [r, r, r, r]; // [BL, BR, TR, TL]
+  for (let k = 0; k < 4; k++) rr[k] = Math.max(0, Math.min(rr[k] || 0, w / 2 - 0.01, d / 2 - 0.01));
+  const bl = rr[0], br = rr[1], tr = rr[2], tl = rr[3];
+  const s = new cls();
+  const x = cx - w / 2, y = cy - d / 2;
+  s.moveTo(x + bl, y);
+  s.lineTo(x + w - br, y);
+  if (br > 0.05) s.absarc(x + w - br, y + br, br, -Math.PI / 2, 0, false);
+  s.lineTo(x + w, y + d - tr);
+  if (tr > 0.05) s.absarc(x + w - tr, y + d - tr, tr, 0, Math.PI / 2, false);
+  s.lineTo(x + tl, y + d);
+  if (tl > 0.05) s.absarc(x + tl, y + d - tl, tl, Math.PI / 2, Math.PI, false);
+  s.lineTo(x, y + bl);
+  if (bl > 0.05) s.absarc(x + bl, y + bl, bl, Math.PI, 1.5 * Math.PI, false);
+  s.closePath();
+  return s;
+};
+const shapeRR = (w, d, r, cx, cy) => roundedRect(THREE.Shape, w, d, r, cx, cy);
+const pathRR = (w, d, r, cx, cy) => roundedRect(THREE.Path, w, d, r, cx, cy);
+// inset i from a W x D radius-r outline
+const insetRR = (cls, W, D, r, i) => roundedRect(cls, W - 2 * i, D - 2 * i, r - i, 0, 0);
+
+const extrudeZ = (shape, depth, z0) => {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: SEG });
+  if (z0) g.translate(0, 0, z0);
+  return g;
+};
+
+// permutation (u,v,t) -> (t,u,v), det = +1 (no reflection)
+const PERM = new THREE.Matrix4().set(
+  0, 0, 1, 0,
+  1, 0, 0, 0,
+  0, 1, 0, 0,
+  0, 0, 0, 1
+);
+
+// CCW outline of a per-corner rounded rect centered at origin. 4*(seg+1) points always.
+const outlinePts = (w, d, radii, seg) => {
+  const pts = [];
+  const defs = [
+    { cx:  w / 2 - radii[1], cy: -d / 2 + radii[1], r: radii[1], a0: -Math.PI / 2 }, // BR
+    { cx:  w / 2 - radii[2], cy:  d / 2 - radii[2], r: radii[2], a0: 0 },            // TR
+    { cx: -w / 2 + radii[3], cy:  d / 2 - radii[3], r: radii[3], a0: Math.PI / 2 },  // TL
+    { cx: -w / 2 + radii[0], cy: -d / 2 + radii[0], r: radii[0], a0: Math.PI }       // BL
+  ];
+  defs.forEach((c) => {
+    for (let k = 0; k <= seg; k++) {
+      const a = c.a0 + (k / seg) * Math.PI / 2;
+      pts.push([c.cx + c.r * Math.cos(a), c.cy + c.r * Math.sin(a)]);
+    }
+  });
+  return pts;
+};
+
+const geomVolume = (g) => {
+  const pos = g.getAttribute('position');
+  let v = 0;
+  for (let i = 0; i < pos.count; i += 3) {
+    const ax = pos.getX(i), ay = pos.getY(i), az = pos.getZ(i);
+    const bx = pos.getX(i + 1), by = pos.getY(i + 1), bz = pos.getZ(i + 1);
+    const cx = pos.getX(i + 2), cy = pos.getY(i + 2), cz = pos.getZ(i + 2);
+    v += (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx)) / 6;
+  }
+  return v;
+};
+
+const flipGeom = (g) => {
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i += 3) {
+    const x = pos.getX(i + 1), y = pos.getY(i + 1), z = pos.getZ(i + 1);
+    pos.setXYZ(i + 1, pos.getX(i + 2), pos.getY(i + 2), pos.getZ(i + 2));
+    pos.setXYZ(i + 2, x, y, z);
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+};
+
+// Sweep a closed cross-section polygon [[inset, z], ...] around a per-corner
+// rounded rect (w x d, radii[4]). Returns a closed torus-like solid, outward wound.
+// Winding of the input polygon is unknown, so the signed volume decides whether
+// the triangle order must be flipped to face outward.
+const sweepSolid = (w, d, radii, cross) => {
+  const rings = cross.map((cz) => {
+    const i = cz[0];
+    const rr = radii.map((r) => Math.max(0.02, r - i));
+    return { pts: outlinePts(w - 2 * i, d - 2 * i, rr, SEG), z: cz[1] };
+  });
+  const n = rings[0].pts.length, m = rings.length, pos = [];
+  for (let k = 0; k < m; k++) {
+    const A = rings[k], B = rings[(k + 1) % m];
+    for (let i2 = 0; i2 < n; i2++) {
+      const j2 = (i2 + 1) % n;
+      const a0 = A.pts[i2], a1 = A.pts[j2], b0 = B.pts[i2], b1 = B.pts[j2];
+      pos.push(a0[0], a0[1], A.z, a1[0], a1[1], A.z, b1[0], b1[1], B.z);
+      pos.push(a0[0], a0[1], A.z, b1[0], b1[1], B.z, b0[0], b0[1], B.z);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  if (geomVolume(g) < 0) flipGeom(g); else g.computeVertexNormals();
+  return g;
+};
+
+const arcPts = (cx, cz, r, a0, a1, n) => {
+  const out = [];
+  for (let k = 0; k <= n; k++) {
+    const a = a0 + (a1 - a0) * k / n;
+    out.push([cx + r * Math.cos(a), cz + r * Math.sin(a)]);
+  }
+  return out;
+};
+
+/**
+ * Build the solid parts of one bin from its parameters.
+ *
+ * @param {object} p bin parameters: width, depth, height, cols, rows, wall,
+ *   floor, divider, radius, radiusIn, and boolean flags lip, tab, scoops,
+ *   floorHoles, floorFillet.
+ * @returns {{parts: Array<{name: string, geom: THREE.BufferGeometry}>,
+ *   warnings: string[], meta: object} | {error: string}}
+ *   Parts are emitted in a fixed order (walls, floor/collar or
+ *   skirt/groove/center/rim, fillet, scoop, tab); the STL fixture tests
+ *   depend on that order.
+ */
+function buildParts(p) {
+  const warnings = [];
+  const W = p.width, D = p.depth, H = p.height;
+  const wall = p.wall, floor = p.floor, div = p.divider;
+  const cols = p.cols, rows = p.rows;
+  const r = clamp(p.radius, 0, Math.min(W / 2 - 1, D / 2 - 1));
+
+  const cavW = (W - 2 * wall - (cols - 1) * div) / cols;
+  const cavD = (D - 2 * wall - (rows - 1) * div) / rows;
+  if (cavW < 3 || cavD < 3) {
+    return { error: 'Compartments would be under 3 mm wide. Reduce columns, rows, or divider thickness.' };
+  }
+  if (floor >= H - 1) return { error: 'Floor thickness must be at least 1 mm less than height.' };
+
+  const rcMax = Math.max(0, Math.min(cavW / 2 - 0.4, cavD / 2 - 0.4));
+  const rIn = (p.radiusIn === undefined || p.radiusIn === null)
+    ? (r > 0.05 ? clamp(r - wall, 0.8, rcMax) : 0)
+    : p.radiusIn;
+  const rcUser = clamp(rIn, 0, rcMax);
+  // corner compartments: outer-facing corner radius floor so the outer arc
+  // never thins the corner wall below gMin. gap = sqrt2*w - (sqrt2-1)*(r - rc)
+  const gMin = Math.max(0.8, 0.7 * wall);
+  const rcFloor = r > 0.05 ? clamp(r - (Math.SQRT2 * wall - gMin) / (Math.SQRT2 - 1), 0, rcMax) : 0;
+  const rcCorner = Math.max(rcUser, rcFloor);
+  const cornerGap = Math.SQRT2 * wall - (Math.SQRT2 - 1) * (r - rcCorner);
+  if (r > 0.05 && cornerGap < 0.15) {
+    return { error: 'Outer radius too large for this wall and compartment size: the corner wall vanishes. Reduce outer radius or increase wall thickness.' };
+  }
+  if (rcCorner > rcUser + 0.05) {
+    warnings.push('Corner compartments rounded to r=' + rcCorner.toFixed(1) + ' mm to keep a ' + gMin.toFixed(1) + ' mm corner wall.');
+  }
+
+  // cell centers
+  const xs = [], ys = [];
+  const x0 = -W / 2 + wall + cavW / 2, y0 = -D / 2 + wall + cavD / 2;
+  for (let i = 0; i < cols; i++) xs.push(x0 + i * (cavW + div));
+  for (let j = 0; j < rows; j++) ys.push(y0 + j * (cavD + div));
+
+  // ---- stacking lip parameters ----
+  // The rim of this bin (outer inset SKIRT+CLR, width rimW) must drop into the
+  // base groove of the bin above (between insets SKIRT-OV and grooveInnerInset)
+  // with CLR play on each side.
+  let lip = !!p.lip;
+  const SKIRT = 0.9, CLR = 0.25, RIM_H = 1.8;
+  const rimOuterInset = SKIRT + CLR;                       // 1.15
+  const rimW = clamp(wall - rimOuterInset - 0.15, 1.1, 1.8);
+  const grooveDepth = Math.min(RIM_H - 0.3, floor - 0.8);
+  if (lip && grooveDepth < 0.6) {
+    lip = false;
+    warnings.push('Stacking lip disabled: floor under 1.4 mm cannot take the base groove.');
+  }
+  if (lip && wall < 1.6) warnings.push('Stacking lip rim overhangs thin walls; wall ≥ 1.8 mm recommended.');
+  const grooveInnerInset = rimOuterInset + rimW + CLR;
+
+  const parts = [];
+
+  // ---- walls + dividers: outer outline minus cavity holes ----
+  const wallsShape = shapeRR(W, D, r, 0, 0);
+  for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+    const rads = [rcUser, rcUser, rcUser, rcUser]; // [BL, BR, TR, TL]
+    if (i === 0        && j === 0       ) rads[0] = rcCorner;
+    if (i === cols - 1 && j === 0       ) rads[1] = rcCorner;
+    if (i === cols - 1 && j === rows - 1) rads[2] = rcCorner;
+    if (i === 0        && j === rows - 1) rads[3] = rcCorner;
+    wallsShape.holes.push(pathRR(cavW, cavD, rads, xs[i], ys[j]));
+  }
+  parts.push({ name: 'walls', geom: extrudeZ(wallsShape, H - floor + OV, floor - OV) });
+
+  // ---- floor holes (per compartment, weight saving) ----
+  const scoops = !!p.scoops;
+  const scoopR = Math.min(12, cavD * 0.55, H - floor - 2);
+  const scoopsOn = scoops && scoopR >= 3;
+  if (scoops && !scoopsOn) warnings.push('Finger scoops skipped: compartments too small or bin too shallow.');
+
+  const holePaths = [];
+  if (p.floorHoles) {
+    const frontMargin = scoopsOn ? Math.max(4.5, scoopR + 2) : 4.5;
+    const hw = cavW - 9, hd = cavD - 4.5 - frontMargin;
+    if (hw >= 8 && hd >= 8) {
+      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+        const hcy = ys[j] - cavD / 2 + frontMargin + hd / 2;
+        holePaths.push(pathRR(hw, hd, 3, xs[i], hcy));
+      }
+    } else {
+      warnings.push('Floor holes skipped: compartments too small.');
+    }
+  }
+
+  // ---- floor, with 45-degree bottom edge chamfer ----
+  const outerR4 = [r, r, r, r];
+  let chB = lip ? Math.min(0.45, floor - 0.3) : Math.min(0.8, floor - 0.4);
+  if (chB < 0.2) chB = 0;
+  if (!lip) {
+    const floorShape = insetRR(THREE.Shape, W, D, r, chB);
+    floorShape.holes = holePaths;
+    parts.push({ name: 'floor', geom: extrudeZ(floorShape, floor, 0) });
+    if (chB > 0) {
+      parts.push({ name: 'collar', geom: sweepSolid(W, D, outerR4, [
+        [chB, 0], [0, chB], [0, floor], [chB + OV, floor]
+      ]) });
+    }
+  } else {
+    // skirt ring with chamfered outer bottom edge, one swept cross-section
+    const skirtCross = chB > 0
+      ? [[chB, 0], [0, chB], [0, floor], [SKIRT, floor], [SKIRT, 0]]
+      : [[0, 0], [0, floor], [SKIRT, floor], [SKIRT, 0]];
+    parts.push({ name: 'skirt', geom: sweepSolid(W, D, outerR4, skirtCross) });
+    // groove ring: thinned floor where the rim of the bin below seats
+    const groove = insetRR(THREE.Shape, W, D, r, SKIRT - OV);
+    groove.holes.push(insetRR(THREE.Path, W, D, r, grooveInnerInset + OV));
+    parts.push({ name: 'groove', geom: extrudeZ(groove, floor - grooveDepth, grooveDepth) });
+    // center slab: full-height floor, carries the holes
+    const center = insetRR(THREE.Shape, W, D, r, grooveInnerInset);
+    center.holes = holePaths;
+    parts.push({ name: 'center', geom: extrudeZ(center, floor, 0) });
+    // rim: trapezoid cross-section, 45-degree chamfered tip for self-centering
+    const ch2 = Math.max(0, Math.min(0.6, (rimW - 0.4) / 2));
+    parts.push({ name: 'rim', geom: sweepSolid(W, D, outerR4, [
+      [rimOuterInset, H - OV], [rimOuterInset + rimW, H - OV],
+      [rimOuterInset + rimW - ch2, H + RIM_H], [rimOuterInset + ch2, H + RIM_H]
+    ]) });
+  }
+
+  // ---- interior floor fillet: concave sweep around each compartment perimeter ----
+  if (p.floorFillet) {
+    const fr = Math.min(2, cavW / 6, cavD / 6);
+    if (fr >= 0.8) {
+      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+        const frads = [rcUser, rcUser, rcUser, rcUser];
+        if (i === 0        && j === 0       ) frads[0] = rcCorner;
+        if (i === cols - 1 && j === 0       ) frads[1] = rcCorner;
+        if (i === cols - 1 && j === rows - 1) frads[2] = rcCorner;
+        if (i === 0        && j === rows - 1) frads[3] = rcCorner;
+        const fcross = [[-PEN, floor - PEN], [fr, floor - PEN], [fr, floor]]
+          .concat(arcPts(fr, floor + fr, fr, -Math.PI / 2, -Math.PI, 6))
+          .concat([[-PEN, floor + fr]]);
+        const fg = sweepSolid(cavW, cavD, frads, fcross);
+        fg.translate(xs[i], ys[j], 0);
+        parts.push({ name: 'fillet', geom: fg });
+      }
+    } else {
+      warnings.push('Floor fillet skipped: compartments too small.');
+    }
+  }
+
+  // ---- finger scoops: concave quarter-round fillet at the front of each cavity ----
+  if (scoopsOn) {
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+      const Rs = scoopR;
+      const prof = new THREE.Shape();
+      prof.moveTo(-PEN, -PEN);
+      prof.lineTo(Rs, -PEN);
+      prof.lineTo(Rs, 0);
+      prof.absarc(Rs, Rs, Rs, -Math.PI / 2, Math.PI, true); // concave, ends at (0, Rs)
+      prof.lineTo(-PEN, Rs);
+      prof.closePath();
+      const g = new THREE.ExtrudeGeometry(prof, { depth: cavW + 2 * PEN, bevelEnabled: false, curveSegments: SEG });
+      g.applyMatrix4(PERM); // (u,v,t) -> (t,u,v): u into bin (+y), v up (+z), t across (+x)
+      g.translate(xs[i] - cavW / 2 - PEN, ys[j] - cavD / 2, floor);
+      parts.push({ name: 'scoop', geom: g });
+    }
+  }
+
+  // ---- label tab: shelf at front wall top with 45-degree chamfer underneath ----
+  if (p.tab) {
+    const tabW = Math.min(W - 2 * wall - 2, 60), tabD = 11, th = 1.6;
+    if (tabW < 20) {
+      warnings.push('Label tab skipped: bin narrower than 24 mm.');
+    } else {
+      const tp = new THREE.Shape(); // (u,v): u into bin from inner front wall face, v from wall top (CCW)
+      tp.moveTo(-PEN, 0);
+      tp.lineTo(-PEN, -th - (tabD + PEN));
+      tp.lineTo(tabD, -th);
+      tp.lineTo(tabD, 0);
+      tp.closePath();
+      const tg = new THREE.ExtrudeGeometry(tp, { depth: tabW, bevelEnabled: false, curveSegments: SEG });
+      tg.applyMatrix4(PERM);
+      tg.translate(-tabW / 2, -D / 2 + wall, H);
+      parts.push({ name: 'tab', geom: tg });
+    }
+  }
+
+  return {
+    parts,
+    warnings,
+    meta: {
+      cavW, cavD, cavH: H - floor,
+      compartments: cols * rows,
+      totalH: H + (lip ? RIM_H : 0),
+      lip
+    }
+  };
+}
+
+const eachTriangle = (geom, fn) => {
+  const pos = geom.getAttribute('position');
+  const idx = geom.getIndex();
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  const n = idx ? idx.count : pos.count;
+  for (let i = 0; i < n; i += 3) {
+    const i0 = idx ? idx.getX(i) : i, i1 = idx ? idx.getX(i + 1) : i + 1, i2 = idx ? idx.getX(i + 2) : i + 2;
+    a.fromBufferAttribute(pos, i0); b.fromBufferAttribute(pos, i1); c.fromBufferAttribute(pos, i2);
+    fn(a, b, c);
+  }
+};
+
+/**
+ * Triangle count, total signed volume, and non-finite-triangle count over a
+ * part list.
+ *
+ * @param {Array<{name: string, geom: THREE.BufferGeometry}>} parts
+ * @returns {{triangles: number, volumeMM3: number, nonFinite: number}}
+ */
+function computeStats(parts) {
+  let tris = 0, vol = 0, bad = 0;
+  parts.forEach((p) => {
+    eachTriangle(p.geom, (a, b, c) => {
+      tris++;
+      const v = (a.x * (b.y * c.z - b.z * c.y) - a.y * (b.x * c.z - b.z * c.x) + a.z * (b.x * c.y - b.y * c.x)) / 6;
+      if (!isFinite(v)) bad++;
+      vol += v;
+    });
+  });
+  return { triangles: tris, volumeMM3: vol, nonFinite: bad };
+}
+
+/**
+ * Signed volume of one part in mm^3 (positive for an outward-wound closed shell).
+ *
+ * @param {{name: string, geom: THREE.BufferGeometry}} part
+ * @returns {number}
+ */
+function partVolume(part) {
+  let vol = 0;
+  eachTriangle(part.geom, (a, b, c) => {
+    vol += (a.x * (b.y * c.z - b.z * c.y) - a.y * (b.x * c.z - b.z * c.x) + a.z * (b.x * c.y - b.y * c.x)) / 6;
+  });
+  return vol;
+}
+
+/**
+ * Serialize parts to a binary STL file image.
+ *
+ * @param {Array<{name: string, geom: THREE.BufferGeometry}>} parts
+ * @returns {ArrayBuffer} 84-byte header + 50 bytes per triangle, little-endian.
+ */
+function exportSTL(parts) {
+  let tris = 0;
+  parts.forEach((p) => {
+    const pos = p.geom.getAttribute('position');
+    const idx = p.geom.getIndex();
+    tris += (idx ? idx.count : pos.count) / 3;
+  });
+  const buf = new ArrayBuffer(84 + 50 * tris);
+  const dv = new DataView(buf);
+  const header = 'BinLab parametric bin generator';
+  for (let h = 0; h < header.length && h < 80; h++) dv.setUint8(h, header.charCodeAt(h));
+  dv.setUint32(80, tris, true);
+  let off = 84;
+  const ab = new THREE.Vector3(), ac = new THREE.Vector3(), n = new THREE.Vector3();
+  parts.forEach((p) => {
+    eachTriangle(p.geom, (a, b, c) => {
+      ab.copy(b).sub(a); ac.copy(c).sub(a); n.copy(ab).cross(ac).normalize();
+      if (!isFinite(n.x)) n.set(0, 0, 1);
+      dv.setFloat32(off, n.x, true); dv.setFloat32(off + 4, n.y, true); dv.setFloat32(off + 8, n.z, true);
+      dv.setFloat32(off + 12, a.x, true); dv.setFloat32(off + 16, a.y, true); dv.setFloat32(off + 20, a.z, true);
+      dv.setFloat32(off + 24, b.x, true); dv.setFloat32(off + 28, b.y, true); dv.setFloat32(off + 32, b.z, true);
+      dv.setFloat32(off + 36, c.x, true); dv.setFloat32(off + 40, c.y, true); dv.setFloat32(off + 44, c.z, true);
+      dv.setUint16(off + 48, 0, true);
+      off += 50;
+    });
+  });
+  return buf;
+}
+
+/* ---- src/layout.js ---- */
+// BinLab drawer-layout helpers. Pure: no DOM, no three.js.
+// A tray is { x, y, p } with p.width / p.depth in mm; an envelope is the
+// usable drawer area { w, d }. Coordinates are top-view, origin at the
+// drawer's front-left corner. Comparisons use a 0.01 mm epsilon so trays
+// that merely touch are not treated as overlapping.
+
+/**
+ * Format a number for display: fixed decimals, trailing ".0" stripped.
+ * @param {number} v
+ * @param {number} [d=1] decimal places
+ * @returns {string}
+ */
+function fmt(v, d) { return (+v).toFixed(d === undefined ? 1 : d).replace(/\.0$/, ''); }
+
+/**
+ * Whether a w x d rect at (x, y) overlaps any tray (touching edges do not count).
+ * @param {Array<object>} trays
+ * @param {number} x @param {number} y @param {number} w @param {number} d
+ * @param {object|null} self tray to ignore (identity comparison)
+ * @returns {boolean}
+ */
+function overlapsAny(trays, x, y, w, d, self) {
+  for (let i = 0; i < trays.length; i++) {
+    const t = trays[i];
+    if (t === self) continue;
+    if (x < t.x + t.p.width - 0.01 && t.x < x + w - 0.01 &&
+        y < t.y + t.p.depth - 0.01 && t.y < y + d - 0.01) return true;
+  }
+  return false;
+}
+
+/**
+ * First free spot for a w x d tray: candidates are the origin and the right /
+ * back edge of every tray, preferring lowest y, then lowest x.
+ * @param {Array<object>} trays
+ * @param {{w: number, d: number}} env usable envelope
+ * @param {number} w @param {number} d
+ * @returns {{x: number, y: number}} snapped to 0.5 mm; (0,0) if nothing fits
+ */
+function nextSpot(trays, env, w, d) {
+  const cands = [{ x: 0, y: 0 }];
+  trays.forEach((t) => {
+    cands.push({ x: t.x + t.p.width, y: t.y });
+    cands.push({ x: t.x, y: t.y + t.p.depth });
+  });
+  let best = null;
+  cands.forEach((c) => {
+    if (c.x + w > env.w + 0.01 || c.y + d > env.d + 0.01) return;
+    if (overlapsAny(trays, c.x, c.y, w, d, null)) return;
+    if (!best || c.y < best.y - 0.01 || (Math.abs(c.y - best.y) < 0.01 && c.x < best.x)) best = c;
+  });
+  return best ? { x: Math.round(best.x * 2) / 2, y: Math.round(best.y * 2) / 2 } : { x: 0, y: 0 };
+}
+
+/**
+ * Snap a dragged tray edge coordinate to nearby tray edges (butt or align)
+ * and the envelope edges, within 4 mm.
+ * @param {Array<object>} trays
+ * @param {number} v proposed position on the axis
+ * @param {number} size tray extent on the axis
+ * @param {number} span envelope extent on the axis
+ * @param {object|null} self tray being dragged (excluded)
+ * @param {'x'|'y'} axis
+ * @returns {number} snapped position (v unchanged if nothing is in range)
+ */
+function snapAxis(trays, v, size, span, self, axis) {
+  const SNAP = 4, cands = [0, span - size];
+  trays.forEach((o) => {
+    if (o === self) return;
+    const os = axis === 'x' ? o.x : o.y;
+    const ol = axis === 'x' ? o.p.width : o.p.depth;
+    cands.push(os + ol, os - size, os, os + ol - size); // butt either side, align either edge
+  });
+  let best = v, bd = SNAP;
+  cands.forEach((c) => { const d2 = Math.abs(c - v); if (d2 < bd) { bd = d2; best = c; } });
+  return best;
+}
+
+/**
+ * Largest empty axis-aligned rect around a point, or null.
+ * Expands to the nearest tray/envelope edges twice (row-first and
+ * column-first) and keeps the larger result, so a point in an L-shaped void
+ * gets the better of the two rectangles. Slivers under 5 mm are rejected.
+ * @param {Array<object>} trays
+ * @param {{w: number, d: number}} env usable envelope
+ * @param {number} px @param {number} py point in envelope coordinates
+ * @returns {{x: number, y: number, w: number, d: number}|null}
+ */
+function emptyRectAt(trays, env, px, py) {
+  if (px < 0 || py < 0 || px > env.w || py > env.d) return null;
+  for (let i = 0; i < trays.length; i++) {
+    const t = trays[i];
+    if (px > t.x && px < t.x + t.p.width && py > t.y && py < t.y + t.p.depth) return null;
+  }
+  function expand(xFirst) {
+    let x0 = 0, x1 = env.w, y0 = 0, y1 = env.d;
+    function passX(yl, yh) {
+      trays.forEach((t) => {
+        if (t.y < yh - 0.01 && t.y + t.p.depth > yl + 0.01) {
+          const tx1 = t.x + t.p.width;
+          if (tx1 <= px + 0.01 && tx1 > x0) x0 = tx1;
+          if (t.x >= px - 0.01 && t.x < x1) x1 = t.x;
+        }
+      });
+    }
+    function passY(xl, xh) {
+      trays.forEach((t) => {
+        if (t.x < xh - 0.01 && t.x + t.p.width > xl + 0.01) {
+          const ty1 = t.y + t.p.depth;
+          if (ty1 <= py + 0.01 && ty1 > y0) y0 = ty1;
+          if (t.y >= py - 0.01 && t.y < y1) y1 = t.y;
+        }
+      });
+    }
+    if (xFirst) { passX(py, py); passY(x0, x1); } else { passY(px, px); passX(y0, y1); }
+    return { x: x0, y: y0, w: x1 - x0, d: y1 - y0 };
+  }
+  const a = expand(true), b = expand(false);
+  const r = (a.w * a.d >= b.w * b.d) ? a : b;
+  return (r.w < 5 || r.d < 5) ? null : r;
+}
+
+/**
+ * Human-readable layout problems: trays outside the envelope and pairwise
+ * overlaps. The returned array also carries a `bad` map of offending tray
+ * indices (used for the red warning cages).
+ * @param {Array<object>} trays
+ * @param {{w: number, d: number}} env usable envelope
+ * @returns {string[] & {bad: Object<number, 1>}}
+ */
+function layoutIssues(trays, env) {
+  const issues = [];
+  const bad = {};
+  trays.forEach((t, i) => {
+    if (t.x + t.p.width > env.w + 0.01 || t.y + t.p.depth > env.d + 0.01) {
+      issues.push('T' + (i + 1) + ' exceeds the usable envelope ' + fmt(env.w) + ' × ' + fmt(env.d) + '.');
+      bad[i] = 1;
+    }
+  });
+  for (let a = 0; a < trays.length; a++) for (let b = a + 1; b < trays.length; b++) {
+    const A = trays[a], B = trays[b];
+    if (A.x < B.x + B.p.width - 0.01 && B.x < A.x + A.p.width - 0.01 &&
+        A.y < B.y + B.p.depth - 0.01 && B.y < A.y + A.p.depth - 0.01) {
+      issues.push('T' + (a + 1) + ' overlaps T' + (b + 1) + '.');
+      bad[a] = 1; bad[b] = 1;
+    }
+  }
+  issues.bad = bad;
+  return issues;
+}
+
+/**
+ * Serialize drawer + tray state to a URL hash string.
+ * @param {{drawer: {on: boolean, w: number, d: number, clr: number},
+ *   trays: Array<{x: number, y: number, p: object}>}} state
+ * @returns {string} '#' + URI-encoded JSON
+ */
+function serializeState(state) {
+  const s = {
+    d: { on: state.drawer.on, w: state.drawer.w, d: state.drawer.d, clr: state.drawer.clr },
+    t: state.trays.map((t) => ({ x: t.x, y: t.y, p: t.p }))
+  };
+  return '#' + encodeURIComponent(JSON.stringify(s));
+}
+
+/**
+ * Parse a URL hash back into drawer + tray state. Unknown parameter keys are
+ * dropped, missing ones filled from defaults, tray count capped at 24.
+ * @param {string} hash location.hash, '#' included
+ * @param {{drawer: {w: number, d: number, clr: number}, params: object}} defaults
+ *   fallback drawer dims and a template of valid tray parameters
+ * @returns {{drawer: {on: boolean, w: number, d: number, clr: number},
+ *   trays: Array<{x: number, y: number, p: object}>}|false} false if the hash
+ *   is empty or malformed (never throws)
+ */
+function parseState(hash, defaults) {
+  try {
+    if (!hash || hash.length < 3) return false;
+    const s = JSON.parse(decodeURIComponent(hash.slice(1)));
+    if (!s || !s.t || !s.t.length) return false;
+    const drawer = { on: !!(s.d && s.d.on), w: defaults.drawer.w, d: defaults.drawer.d, clr: defaults.drawer.clr };
+    if (s.d) {
+      drawer.w = +s.d.w || drawer.w;
+      drawer.d = +s.d.d || drawer.d;
+      drawer.clr = (+s.d.clr >= 0) ? +s.d.clr : drawer.clr;
+    }
+    const trays = s.t.slice(0, 24).map((t) => {
+      const p = Object.assign({}, defaults.params);
+      Object.keys(p).forEach((k) => { if (t.p && t.p[k] !== undefined) p[k] = t.p[k]; });
+      return { x: +t.x || 0, y: +t.y || 0, p };
+    });
+    return { drawer, trays };
+  } catch (e) { return false; }
+}
+
+/* ---- src/viewer.js ---- */
+// BinLab viewer: three.js scene, lights, grid, orbit camera, pick/drag plane
+// math, hover highlight, and the drawer wireframe. Owns everything that
+// touches THREE; the app layer only moves the objects it gets back.
+// Display space is three.js y-up; the world group is rotated so model z-up
+// geometry stands upright. Expects a global `THREE` (r128).
+/* global THREE */
+
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+stage.insertBefore(renderer.domElement, stage.firstChild);
+
+/** The WebGL canvas (for cursor styling and event wiring). */
+const canvas = renderer.domElement;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1e4e79);
+const camera = new THREE.PerspectiveCamera(40, 1, 1, 6000);
+scene.add(new THREE.HemisphereLight(0xdfeaf4, 0x24405c, 0.95));
+const key = new THREE.DirectionalLight(0xffffff, 0.75); key.position.set(1, 1.6, 0.9); scene.add(key);
+const fill = new THREE.DirectionalLight(0xbcd4e8, 0.28); fill.position.set(-1.2, 0.7, -0.8); scene.add(fill);
+
+const world = new THREE.Group();
+world.rotation.x = -Math.PI / 2;
+scene.add(world);
+let grid = null, drawerVis = null;
+
+const binMat = new THREE.MeshStandardMaterial({ color: 0xd7d3c8, roughness: 0.55, metalness: 0.05 });
+const edgeMat = new THREE.LineBasicMaterial({ color: 0xeaf2f8, transparent: true, opacity: 0.32 });
+const selEdgeMat = new THREE.LineBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0.85 });
+const errMat = new THREE.LineBasicMaterial({ color: 0xff8a5c });
+const drawerLineMat = new THREE.LineBasicMaterial({ color: 0xbcd9ef, transparent: true, opacity: 0.9 });
+const usableMat = new THREE.LineDashedMaterial({ color: 0x8fd0ff, dashSize: 6, gapSize: 5, transparent: true, opacity: 0.8 });
+const floorMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05, depthWrite: false, side: THREE.DoubleSide });
+
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const orbit = { theta: 0.65, phi: 1.12, radius: 320, spin: !reduced };
+const target = new THREE.Vector3(0, 20, 0);
+let refit = true;
+
+const raycaster = new THREE.Raycaster();
+const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // display-space floor
+
+const pointerNDC = (e) => {
+  const r = canvas.getBoundingClientRect();
+  return { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 };
+};
+
+/**
+ * Project a pointer event onto the drawer floor plane.
+ * @returns {{mx: number, my: number}|null} model-space x/y in mm, or null when
+ *   the ray misses the plane
+ */
+function planePoint(e) {
+  raycaster.setFromCamera(pointerNDC(e), camera);
+  const v = new THREE.Vector3();
+  return raycaster.ray.intersectPlane(dragPlane, v) ? { mx: v.x, my: -v.z } : null;
+}
+
+/**
+ * Raycast a pointer event against the visible tray meshes.
+ * @param {Array<object>} trays tray list (each with a .group)
+ * @returns {object|null} the hit tray
+ */
+function pickTray(e, trays) {
+  raycaster.setFromCamera(pointerNDC(e), camera);
+  const meshes = [];
+  trays.forEach((t) => {
+    if (t.group && t.group.visible) t.group.traverse((o) => { if (o.isMesh) meshes.push(o); });
+  });
+  const hits = raycaster.intersectObjects(meshes, false);
+  return hits.length ? hits[0].object.userData.tray : null;
+}
+
+/** Enable or pause the idle turntable spin. */
+function setSpin(v) { orbit.spin = v; }
+
+/** Rotate the orbit camera by a pointer delta in pixels. */
+function orbitRotate(dx, dy) {
+  orbit.theta -= dx * 0.006;
+  orbit.phi -= dy * 0.006;
+  orbit.phi = Math.max(0.05, Math.min(3.05, orbit.phi));
+}
+
+/** Scale the orbit distance (wheel/pinch zoom), clamped to 60–3000 mm. */
+function orbitZoom(scale) {
+  orbit.radius = Math.max(60, Math.min(3000, orbit.radius * scale));
+}
+
+/** Ask the next fitView call to also reset the orbit distance. */
+function requestRefit() { refit = true; }
+
+/**
+ * Rebuild the ground grid and aim the camera.
+ * @param {number} spanBase largest footprint dimension the grid must cover
+ * @param {number} diag scene diagonal used for the refit distance
+ * @param {number} targetY look-at height
+ * @param {number} fitScale distance multiplier applied on a pending refit
+ */
+function fitView(spanBase, diag, targetY, fitScale) {
+  if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
+  const span = spanBase * 2.2;
+  grid = new THREE.GridHelper(span, Math.round(span / 20), 0x35699a, 0x2a5a89);
+  scene.add(grid);
+  target.set(0, targetY, 0);
+  if (refit) { orbit.radius = diag * fitScale; refit = false; }
+}
+
+/** Dispose all geometries under an object and detach it from the world. */
+function disposeGroup(g) {
+  if (!g) return;
+  g.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+  world.remove(g);
+}
+
+/**
+ * Build the display group for one tray: a mesh plus soft edge lines per part.
+ * Each mesh carries the tray in userData for picking.
+ * @param {Array<{name: string, geom: THREE.BufferGeometry}>} parts
+ * @param {object} tray
+ * @returns {THREE.Group} already added to the world
+ */
+function buildTrayGroup(parts, tray) {
+  const group = new THREE.Group();
+  parts.forEach((part) => {
+    const mesh = new THREE.Mesh(part.geom, binMat);
+    mesh.userData.tray = tray;
+    group.add(mesh);
+    group.add(new THREE.LineSegments(new THREE.EdgesGeometry(part.geom, 28), edgeMat));
+  });
+  world.add(group);
+  return group;
+}
+
+/** Swap a tray group's edge lines between the selected and idle materials. */
+function setTrayHighlight(group, selected) {
+  group.traverse((o) => { if (o.isLineSegments) o.material = selected ? selEdgeMat : edgeMat; });
+}
+
+/**
+ * Red wireframe cage for a tray with a layout problem.
+ * @returns {THREE.LineSegments} already added to the world; caller positions it
+ */
+function makeWarnBox(w, d, h) {
+  const box = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(w + 2, d + 2, h + 2)), errMat);
+  world.add(box);
+  return box;
+}
+
+/** Set the bin material color from a CSS color string. */
+function setBinColor(v) { binMat.color.set(v); }
+
+/**
+ * Show, replace, or clear the drawer wireframe: outer outline, dashed usable
+ * envelope, corner posts, and a faint floor plane.
+ * @param {{w: number, d: number, uw: number, ud: number}|null} dims outer and
+ *   usable drawer dimensions, or null to remove the visuals
+ */
+function setDrawerVisuals(dims) {
+  disposeGroup(drawerVis); drawerVis = null;
+  if (!dims) return;
+  drawerVis = new THREE.Group();
+  const rect = (w, d, mat, dashed) => {
+    const pts = [new THREE.Vector3(-w / 2, -d / 2, 0), new THREE.Vector3(w / 2, -d / 2, 0),
+                 new THREE.Vector3(w / 2, d / 2, 0), new THREE.Vector3(-w / 2, d / 2, 0), new THREE.Vector3(-w / 2, -d / 2, 0)];
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    const line = new THREE.Line(g, mat);
+    if (dashed) line.computeLineDistances();
+    return line;
+  };
+  drawerVis.add(rect(dims.w, dims.d, drawerLineMat, false));
+  drawerVis.add(rect(dims.uw, dims.ud, usableMat, true));
+  [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach((s) => {
+    const g = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(s[0] * dims.w / 2, s[1] * dims.d / 2, 0),
+      new THREE.Vector3(s[0] * dims.w / 2, s[1] * dims.d / 2, 40)]);
+    drawerVis.add(new THREE.Line(g, drawerLineMat));
+  });
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(dims.w, dims.d), floorMat);
+  plane.position.z = -0.05;
+  drawerVis.add(plane);
+  world.add(drawerVis);
+}
+
+let hoverGroup = null;
+const ensureHover = () => {
+  if (hoverGroup) return;
+  hoverGroup = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.14, depthWrite: false, side: THREE.DoubleSide }));
+  const pts = [new THREE.Vector3(-0.5, -0.5, 0), new THREE.Vector3(0.5, -0.5, 0),
+               new THREE.Vector3(0.5, 0.5, 0), new THREE.Vector3(-0.5, 0.5, 0), new THREE.Vector3(-0.5, -0.5, 0)];
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
+  hoverGroup.add(m); hoverGroup.add(line);
+  hoverGroup.visible = false;
+  world.add(hoverGroup);
+};
+
+/**
+ * Highlight an empty drawer rect (white plane + outline) under the cursor.
+ * @param {{x: number, y: number, w: number, d: number}} r
+ * @param {{w: number, d: number}} env usable envelope
+ */
+function showHover(r, env) {
+  ensureHover();
+  hoverGroup.visible = true;
+  hoverGroup.position.set(-env.w / 2 + r.x + r.w / 2, -env.d / 2 + r.y + r.d / 2, 0.15);
+  hoverGroup.scale.set(r.w, r.d, 1);
+}
+
+/** Hide the empty-space hover highlight. */
+function hideHover() { if (hoverGroup) hoverGroup.visible = false; }
+
+/** Match the renderer and camera to the stage size. */
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+new ResizeObserver(resize).observe(stage);
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (orbit.spin) orbit.theta += 0.0018;
+  // hide the grid when the camera dips below the horizon
+  if (grid) grid.visible = orbit.phi <= Math.PI / 2 + 0.03;
+  camera.position.set(
+    target.x + orbit.radius * Math.sin(orbit.phi) * Math.sin(orbit.theta),
+    target.y + orbit.radius * Math.cos(orbit.phi),
+    target.z + orbit.radius * Math.sin(orbit.phi) * Math.cos(orbit.theta)
+  );
+  camera.lookAt(target);
+  renderer.render(scene, camera);
+}
+
+/** Start the render loop. */
+function startAnimation() { animate(); }
+
+/* ---- src/app.js ---- */
+// BinLab app: DOM controls, tray bar, presets, title block, fit checker,
+// download, share, keyboard, and the wiring between geometry, layout, and
+// viewer. All three.js work lives in viewer.js; all math in geometry/layout.
+
+
+
+
+
+/* ---------------- parameter definitions ---------------- */
+const DEFS = [
+  { sec: 'c-dims',  id: 'width',   lab: 'width',   min: 40,  max: 450, step: 1,   val: 160 },
+  { sec: 'c-dims',  id: 'depth',   lab: 'depth',   min: 40,  max: 450, step: 1,   val: 100 },
+  { sec: 'c-dims',  id: 'height',  lab: 'height',  min: 10,  max: 150, step: 1,   val: 35 },
+  { sec: 'c-grid',  id: 'cols',    lab: 'columns', min: 1,   max: 12,  step: 1,   val: 3 },
+  { sec: 'c-grid',  id: 'rows',    lab: 'rows',    min: 1,   max: 12,  step: 1,   val: 2 },
+  { sec: 'c-walls', id: 'wall',    lab: 'wall',    min: 0.8, max: 4,   step: 0.1, val: 1.8 },
+  { sec: 'c-walls', id: 'floor',   lab: 'floor',   min: 0.8, max: 5,   step: 0.1, val: 2 },
+  { sec: 'c-walls', id: 'divider', lab: 'divider', min: 0.8, max: 4,   step: 0.1, val: 1.2 },
+  { sec: 'c-style', id: 'radius',   lab: 'outer radius', min: 0, max: 16, step: 0.5, val: 3 },
+  { sec: 'c-style', id: 'radiusIn', lab: 'inner radius', min: 0, max: 12, step: 0.5, val: 1.5 }
+];
+const FLAGS = ['lip', 'tab', 'scoops', 'floorHoles', 'floorFillet'];
+const inputs = {};
+
+function defaultParams() {
+  const p = {};
+  DEFS.forEach((d) => { p[d.id] = d.val; });
+  FLAGS.forEach((f) => { p[f] = false; });
+  return p;
+}
+function readParams() {
+  const p = {};
+  DEFS.forEach((d) => { p[d.id] = parseFloat(inputs[d.id].value); });
+  FLAGS.forEach((f) => { p[f] = document.getElementById('f-' + f).checked; });
+  return p;
+}
+function writeInputs(t) {
+  DEFS.forEach((d) => {
+    inputs[d.id].value = t.p[d.id];
+    document.getElementById('r-' + d.id).value = t.p[d.id];
+  });
+  FLAGS.forEach((f) => { document.getElementById('f-' + f).checked = !!t.p[f]; });
+  document.getElementById('px').value = t.x;
+  document.getElementById('py').value = t.y;
+}
+
+DEFS.forEach((d) => {
+  const host = document.getElementById(d.sec);
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = `<label for="r-${d.id}">${d.lab}<em>${d.min}–${d.max}</em></label>`
+    + `<input type="range" id="r-${d.id}" min="${d.min}" max="${d.max}" step="${d.step}" value="${d.val}">`
+    + `<input type="number" id="n-${d.id}" min="${d.min}" max="${d.max}" step="${d.step}" value="${d.val}" aria-label="${d.lab}">`;
+  host.appendChild(row);
+  const r = row.children[1], n = row.children[2];
+  r.addEventListener('input', () => { n.value = r.value; onParamChange(); });
+  n.addEventListener('input', () => { r.value = n.value; onParamChange(); });
+  n.addEventListener('change', () => {
+    const v = Math.max(d.min, Math.min(d.max, parseFloat(n.value) || d.min));
+    n.value = v; r.value = v; onParamChange();
+  });
+  inputs[d.id] = n;
+});
+FLAGS.forEach((f) => {
+  document.getElementById('f-' + f).addEventListener('change', onParamChange);
+});
+
+/* ---------------- state ---------------- */
+function makeTray(x, y, p) {
+  return { x, y, p, group: null, warnBox: null, parts: null, meta: null, stats: null, err: null, gwarn: [] };
+}
+let trays = [makeTray(0, 0, defaultParams())];
+let sel = 0;
+const drawer = { on: false, w: 340, d: 332.5, clr: 2 };
+
+function usable() { return { w: drawer.w - drawer.clr, d: drawer.d - drawer.clr }; }
+
+document.getElementById('drawerOn').addEventListener('change', (e) => {
+  drawer.on = e.target.checked;
+  requestRefit();
+  renderTrayBar(); updateScene();
+});
+['dw', 'dd', 'dclr'].forEach((id) => {
+  document.getElementById(id).addEventListener('change', () => {
+    drawer.w = parseFloat(document.getElementById('dw').value) || drawer.w;
+    drawer.d = parseFloat(document.getElementById('dd').value) || drawer.d;
+    drawer.clr = parseFloat(document.getElementById('dclr').value) || 0;
+    requestRefit(); updateScene();
+  });
+});
+['px', 'py'].forEach((id, k) => {
+  document.getElementById(id).addEventListener('change', (e) => {
+    trays[sel][k === 0 ? 'x' : 'y'] = Math.max(0, parseFloat(e.target.value) || 0);
+    updateScene();
+  });
+});
+
+/* ---------------- tray bar ---------------- */
+function renderTrayBar() {
+  const bar = document.getElementById('traybar');
+  bar.innerHTML = '';
+  trays.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.textContent = 'T' + (i + 1);
+    if (i === sel) b.className = 'active';
+    b.addEventListener('click', () => {
+      sel = i; writeInputs(trays[sel]); renderTrayBar(); updateScene();
+    });
+    bar.appendChild(b);
+  });
+  const mk = (txt, title, fn, disabled) => {
+    const b = document.createElement('button');
+    b.textContent = txt; b.title = title; b.className = 'act'; b.disabled = !!disabled;
+    b.addEventListener('click', fn); bar.appendChild(b);
+  };
+  mk('+', 'add tray', () => { addTray(defaultParams()); }, !drawer.on);
+  mk('⧉', 'duplicate selected', () => { addTray(JSON.parse(JSON.stringify(trays[sel].p))); }, !drawer.on);
+  mk('✕', 'delete selected', () => { deleteTray(sel); }, !drawer.on || trays.length < 2);
+  document.getElementById('drawerDims').className = 'duo' + (drawer.on ? '' : ' dim');
+  document.getElementById('posrow').className = 'duo' + (drawer.on ? '' : ' dim');
+}
+
+function addTray(p) {
+  const spot = nextSpot(trays, usable(), p.width, p.depth);
+  trays.push(makeTray(spot.x, spot.y, p));
+  sel = trays.length - 1;
+  writeInputs(trays[sel]); renderTrayBar(); rebuildTray(sel);
+}
+function deleteTray(i) {
+  disposeGroup(trays[i].group); disposeGroup(trays[i].warnBox);
+  trays.splice(i, 1);
+  sel = Math.min(sel, trays.length - 1);
+  writeInputs(trays[sel]); renderTrayBar(); updateScene();
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Backspace' && e.key !== 'Delete') return;
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.tagName === 'TEXTAREA')) return;
+  if (!drawer.on || trays.length < 2) return;
+  e.preventDefault();
+  deleteTray(sel);
+});
+
+/* ---------------- presets (apply to selected tray) ---------------- */
+const PRESETS = {
+  'SMALL TRAY': { width: 120, depth: 90,  height: 30, cols: 3, rows: 2, wall: 1.6, floor: 2,   divider: 1.2, radius: 3, radiusIn: 1.5, lip: 0, tab: 0, scoops: 0, floorHoles: 0, floorFillet: 0 },
+  'DESK':       { width: 220, depth: 110, height: 40, cols: 4, rows: 2, wall: 2,   floor: 2.4, divider: 1.6, radius: 4, radiusIn: 2,   lip: 0, tab: 0, scoops: 0, floorHoles: 0, floorFillet: 1 },
+  'PARTS BIN':  { width: 160, depth: 100, height: 60, cols: 1, rows: 1, wall: 2.4, floor: 2.4, divider: 1.2, radius: 4, radiusIn: 2.5, lip: 1, tab: 1, scoops: 1, floorHoles: 0, floorFillet: 1 },
+  'DRAWER':     { width: 400, depth: 280, height: 55, cols: 5, rows: 4, wall: 2,   floor: 2,   divider: 1.4, radius: 3, radiusIn: 1.5, lip: 0, tab: 0, scoops: 0, floorHoles: 1, floorFillet: 0 },
+  'TOOL':       { width: 250, depth: 80,  height: 45, cols: 6, rows: 1, wall: 2,   floor: 2.4, divider: 1.8, radius: 3, radiusIn: 1.5, lip: 0, tab: 0, scoops: 0, floorHoles: 0, floorFillet: 0 },
+  'SCREWS':     { width: 180, depth: 120, height: 25, cols: 6, rows: 4, wall: 1.6, floor: 1.6, divider: 1,   radius: 2, radiusIn: 1,   lip: 1, tab: 0, scoops: 1, floorHoles: 0, floorFillet: 0 }
+};
+const presetHost = document.getElementById('presets');
+Object.keys(PRESETS).forEach((name) => {
+  const b = document.createElement('button');
+  b.textContent = name;
+  b.addEventListener('click', () => {
+    const src = PRESETS[name], p = {};
+    DEFS.forEach((d) => { p[d.id] = src[d.id]; });
+    FLAGS.forEach((f) => { p[f] = !!src[f]; });
+    trays[sel].p = p;
+    writeInputs(trays[sel]);
+    presetHost.querySelectorAll('button').forEach((x) => { x.classList.remove('active'); });
+    b.classList.add('active');
+    requestRefit(); scheduleRebuild();
+  });
+  presetHost.appendChild(b);
+});
+
+document.getElementById('binColor').addEventListener('input', (e) => { setBinColor(e.target.value); });
+document.getElementById('printer').addEventListener('change', updateFit);
+
+/* ---------------- canvas interaction: orbit, drag, hover ---------------- */
+const pointers = new Map();
+let lastPinch = 0;
+let drag = null;
+
+canvas.addEventListener('dblclick', (e) => {
+  if (!drawer.on || pickTray(e, trays)) return;
+  const uu = usable(), pp = planePoint(e);
+  if (!pp) return;
+  const rect = emptyRectAt(trays, uu, pp.mx + uu.w / 2, pp.my + uu.d / 2);
+  if (!rect || rect.w < 40 || rect.d < 40) return;
+  const p = JSON.parse(JSON.stringify(trays[sel].p));
+  p.width = Math.min(450, Math.round(rect.w * 2) / 2);
+  p.depth = Math.min(450, Math.round(rect.d * 2) / 2);
+  trays.push(makeTray(Math.round(rect.x * 2) / 2, Math.round(rect.y * 2) / 2, p));
+  sel = trays.length - 1;
+  hideHover();
+  writeInputs(trays[sel]); renderTrayBar(); rebuildTray(sel);
+});
+
+canvas.addEventListener('pointerdown', (e) => {
+  setSpin(false);
+  hideHover();
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  canvas.setPointerCapture(e.pointerId);
+  if (pointers.size === 2 && drag) { drag = null; updateScene(); }
+  if (pointers.size === 1) {
+    const t = drawer.on ? pickTray(e, trays) : null;
+    if (t) {
+      const i = trays.indexOf(t);
+      if (i !== sel) { sel = i; writeInputs(t); renderTrayBar(); updateScene(); }
+      const pp = planePoint(e);
+      if (pp) {
+        const uu = usable();
+        drag = { t, offX: pp.mx - (-uu.w / 2 + t.x), offY: pp.my - (-uu.d / 2 + t.y) };
+      }
+    }
+  }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (pointers.size === 0 && drawer.on) {
+    if (pickTray(e, trays)) { canvas.style.cursor = 'move'; hideHover(); return; }
+    const hp = planePoint(e);
+    const hu = usable();
+    const hr = hp ? emptyRectAt(trays, hu, hp.mx + hu.w / 2, hp.my + hu.d / 2) : null;
+    if (hr && hr.w >= 40 && hr.d >= 40) { canvas.style.cursor = 'copy'; showHover(hr, hu); }
+    else { canvas.style.cursor = ''; hideHover(); }
+    return;
+  }
+  if (pointers.size === 0) { hideHover(); return; }
+  if (!pointers.has(e.pointerId)) return;
+  const prev = pointers.get(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (drag && pointers.size === 1) {
+    const pp = planePoint(e);
+    if (!pp) return;
+    const uu = usable(), w = drag.t.p.width, d = drag.t.p.depth;
+    const nx = snapAxis(trays, pp.mx - drag.offX + uu.w / 2, w, uu.w, drag.t, 'x');
+    const ny = snapAxis(trays, pp.my - drag.offY + uu.d / 2, d, uu.d, drag.t, 'y');
+    drag.t.x = Math.round(Math.max(0, Math.min(Math.max(0, uu.w - w), nx)) * 2) / 2;
+    drag.t.y = Math.round(Math.max(0, Math.min(Math.max(0, uu.d - d), ny)) * 2) / 2;
+    document.getElementById('px').value = drag.t.x;
+    document.getElementById('py').value = drag.t.y;
+    drag.t.group.position.set(-uu.w / 2 + drag.t.x + w / 2, -uu.d / 2 + drag.t.y + d / 2, 0);
+    if (drag.t.warnBox) {
+      drag.t.warnBox.position.x = drag.t.group.position.x;
+      drag.t.warnBox.position.y = drag.t.group.position.y;
+    }
+    return;
+  }
+  if (pointers.size === 1) {
+    orbitRotate(e.clientX - prev.x, e.clientY - prev.y);
+  } else if (pointers.size === 2) {
+    const pts = Array.from(pointers.values());
+    const dd2 = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    if (lastPinch) orbitZoom(lastPinch / dd2);
+    lastPinch = dd2;
+  }
+});
+function endPointer(e) {
+  pointers.delete(e.pointerId); lastPinch = 0;
+  if (drag) { drag = null; updateScene(); }
+}
+canvas.addEventListener('pointerleave', () => { hideHover(); });
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  orbitZoom(1 + Math.sign(e.deltaY) * 0.09);
+}, { passive: false });
+
+/* ---------------- rebuild ---------------- */
+let timer = null;
+function onParamChange() { trays[sel].p = readParams(); scheduleRebuild(); }
+function scheduleRebuild() { clearTimeout(timer); timer = setTimeout(() => { rebuildTray(sel); }, 120); }
+
+function rebuildTray(i) {
+  const t = trays[i];
+  const out = buildParts(t.p);
+  disposeGroup(t.group); t.group = null;
+  if (out.error) {
+    t.err = out.error; t.parts = null; t.meta = null; t.stats = null; t.gwarn = [];
+  } else {
+    t.err = null;
+    t.group = buildTrayGroup(out.parts, t);
+    t.parts = out.parts; t.meta = out.meta; t.gwarn = out.warnings;
+    t.stats = computeStats(out.parts);
+  }
+  updateScene();
+}
+
+function updateScene() {
+  const u = usable();
+  if (!drawer.on) hideHover();
+  // positions + visibility + selection edges + warn boxes
+  trays.forEach((t, i) => {
+    disposeGroup(t.warnBox); t.warnBox = null;
+    if (!t.group) return;
+    if (drawer.on) {
+      t.group.visible = true;
+      t.group.position.set(-u.w / 2 + t.x + t.p.width / 2, -u.d / 2 + t.y + t.p.depth / 2, 0);
+    } else {
+      t.group.visible = (i === sel);
+      t.group.position.set(0, 0, 0);
+    }
+    setTrayHighlight(t.group, drawer.on && i === sel);
+  });
+  const issues = drawer.on ? layoutIssues(trays, u) : [];
+  if (drawer.on) trays.forEach((t, i) => {
+    if (!issues.bad || !issues.bad[i] || !t.group) return;
+    const h = t.meta ? t.meta.totalH : t.p.height;
+    const box = makeWarnBox(t.p.width, t.p.depth, h);
+    box.position.copy(t.group.position); box.position.z = h / 2;
+    t.warnBox = box;
+  });
+
+  // drawer visuals
+  setDrawerVisuals(drawer.on ? { w: drawer.w, d: drawer.d, uw: u.w, ud: u.d } : null);
+
+  // grid + camera
+  const spanBase = drawer.on ? Math.max(drawer.w, drawer.d) : Math.max(trays[sel].p.width, trays[sel].p.depth);
+  const st = trays[sel];
+  const hTot = st.meta ? st.meta.totalH : st.p.height;
+  const diag = drawer.on ? Math.hypot(drawer.w, drawer.d, 80) : Math.hypot(st.p.width, st.p.depth, hTot);
+  fitView(spanBase, diag, drawer.on ? 10 : hTot * 0.42, drawer.on ? 1.25 : 1.55);
+
+  // title block
+  const errEl = document.getElementById('err');
+  const dl = document.getElementById('dl');
+  if (st.err) { errEl.textContent = 'T' + (sel + 1) + ': ' + st.err; errEl.style.display = 'block'; dl.disabled = true; }
+  else { errEl.style.display = 'none'; dl.disabled = false; }
+  dl.textContent = drawer.on ? 'Download STL · T' + (sel + 1) : 'Download STL';
+
+  document.getElementById('tbDrawerRow').style.display = drawer.on ? '' : 'none';
+  document.getElementById('tbTrayRow').style.display = drawer.on ? '' : 'none';
+  if (drawer.on) {
+    let area = 0;
+    trays.forEach((t) => { area += t.p.width * t.p.depth; });
+    document.getElementById('t-drawer').textContent =
+      fmt(drawer.w) + ' × ' + fmt(drawer.d) + ' · ' + Math.min(100, Math.round(100 * area / (u.w * u.d))) + '%';
+    document.getElementById('t-tray').textContent = (sel + 1) + ' / ' + trays.length + ' · at ' + fmt(st.x) + ', ' + fmt(st.y);
+  }
+  if (st.meta && st.stats) {
+    document.getElementById('t-body').textContent = fmt(st.p.width, 0) + ' × ' + fmt(st.p.depth, 0) + ' × ' + fmt(st.meta.totalH);
+    document.getElementById('t-cells').textContent = st.meta.compartments + ' · ' + st.p.cols + '×' + st.p.rows;
+    document.getElementById('t-id').textContent = fmt(st.meta.cavW) + ' × ' + fmt(st.meta.cavD) + ' × ' + fmt(st.meta.cavH);
+    document.getElementById('t-vol').textContent = (st.stats.volumeMM3 / 1000).toFixed(1) + ' cm³';
+    document.getElementById('t-mass').textContent = '≈ ' + Math.round(st.stats.volumeMM3 * 1.24 / 1000) + ' g';
+    document.getElementById('t-mesh').textContent = st.stats.triangles.toLocaleString() + ' tris';
+  }
+
+  // warnings
+  const w = document.getElementById('warns');
+  w.innerHTML = '';
+  (st.gwarn || []).concat(issues).forEach((txt) => {
+    const d = document.createElement('div'); d.textContent = txt; w.appendChild(d);
+  });
+  updateFit();
+  clearTimeout(hashT); hashT = setTimeout(stateToHash, 400);
+}
+
+function updateFit() {
+  const el = document.getElementById('fit');
+  const v = document.getElementById('printer').value;
+  if (!v) { el.textContent = ''; el.className = ''; return; }
+  const bed = v.split(',').map(Number);
+  const msgs = [];
+  let anyBad = false;
+  trays.forEach((t, i) => {
+    if (drawer.on === false && i !== sel) return;
+    const W = t.p.width, D = t.p.depth, Hh = t.meta ? t.meta.totalH : t.p.height;
+    const xy = (W <= bed[0] && D <= bed[1]) || (W <= bed[1] && D <= bed[0]);
+    const z = Hh <= bed[2];
+    if (!(xy && z)) { anyBad = true; msgs.push('T' + (i + 1) + (!xy ? ' exceeds bed' : ' too tall')); }
+  });
+  if (anyBad) { el.textContent = msgs.join(' · ') + ' (' + bed[0] + '×' + bed[1] + '×' + bed[2] + ')'; el.className = 'bad'; }
+  else { el.textContent = (drawer.on ? 'ALL TRAYS FIT' : 'FITS') + ' · ' + bed[0] + '×' + bed[1] + ' bed'; el.className = 'ok'; }
+}
+
+/* ---------------- download ---------------- */
+document.getElementById('dl').addEventListener('click', () => {
+  const st = trays[sel];
+  if (!st.parts) return;
+  const buf = exportSTL(st.parts);
+  const blob = new Blob([buf], { type: 'model/stl' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const p = st.p;
+  a.download = (drawer.on ? 'tray' + (sel + 1) + '_' : 'bin_') + p.width + 'x' + p.depth + 'x' + p.height + '_' + p.cols + 'x' + p.rows + '.stl';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+});
+
+/* ---------------- share / URL state ---------------- */
+let hashT = null;
+function stateToHash() {
+  try {
+    const h = serializeState({ drawer, trays });
+    if (h.length < 6000) history.replaceState(null, '', h);
+  } catch (e) { /* history API unavailable (e.g. sandboxed frame) */ }
+}
+function stateFromHash() {
+  const s = parseState(location.hash, { drawer: { w: drawer.w, d: drawer.d, clr: drawer.clr }, params: defaultParams() });
+  if (!s) return false;
+  drawer.on = s.drawer.on; drawer.w = s.drawer.w; drawer.d = s.drawer.d; drawer.clr = s.drawer.clr;
+  document.getElementById('drawerOn').checked = drawer.on;
+  document.getElementById('dw').value = drawer.w;
+  document.getElementById('dd').value = drawer.d;
+  document.getElementById('dclr').value = drawer.clr;
+  trays = s.trays.map((t) => makeTray(t.x, t.y, t.p));
+  sel = 0;
+  return true;
+}
+const shareBtn = document.getElementById('share');
+if (shareBtn) shareBtn.addEventListener('click', () => {
+  stateToHash();
+  const url = location.href;
+  const done = () => { shareBtn.textContent = 'Copied'; setTimeout(() => { shareBtn.textContent = 'Share'; }, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => { window.prompt('Copy link:', url); });
+  else window.prompt('Copy link:', url);
+});
+
+/* ---------------- go ---------------- */
+stateFromHash();
+renderTrayBar();
+writeInputs(trays[sel]);
+resize();
+trays.forEach((_, i) => { rebuildTray(i); });
+startAnimation();
+})();
+</script>
+</body>
+</html>
