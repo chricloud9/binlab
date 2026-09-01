@@ -1,0 +1,10 @@
+{
+  "name": "binlab",
+  "version": "1.0.0",
+  "description": "Browser-based parametric generator for 3D-printable storage bins and drawer organizers",
+  "type": "module",
+  "license": "MIT",
+  "devDependencies": {
+    "three": "0.128.0"
+  }
+}
