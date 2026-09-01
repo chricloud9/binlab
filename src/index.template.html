@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BinLab — parametric bin &amp; drawer organizer generator</title>
+<meta name="description" content="Free parametric drawer organizer and bin generator. Live 3D preview, multi-tray drawer layout planning, stacking lips, chamfers, watertight STL export. Runs entirely in your browser, no account.">
+<meta property="og:title" content="BinLab — parametric bin &amp; drawer organizer generator">
+<meta property="og:description" content="Design custom 3D-printable storage trays: exact dimensions, stacking lips, drawer layouts, free STL export.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<!-- STYLES -->
+</head>
+<body>
+<header>
+  <div class="mark"><b>BINLAB</b><span>BIN &amp; TRAY GENERATOR</span></div>
+  <div class="presets" id="presets" role="group" aria-label="Presets"></div>
+  <button id="share">Share</button>
+  <button id="dl">Download STL</button>
+</header>
+<main>
+  <aside>
+    <fieldset><legend>Drawer layout</legend>
+      <label class="tgl"><input type="checkbox" id="drawerOn"> drawer mode <small>multi-tray</small></label>
+      <div class="duo" id="drawerDims">
+        <label>drawer W<input type="number" id="dw" min="60" max="1200" step="0.5" value="340"></label>
+        <label>drawer D<input type="number" id="dd" min="60" max="1200" step="0.5" value="332.5"></label>
+        <label>clearance<input type="number" id="dclr" min="0" max="6" step="0.5" value="2"></label>
+      </div>
+      <div id="traybar"></div>
+      <div class="duo" id="posrow">
+        <label>tray X<input type="number" id="px" min="0" max="1200" step="0.5" value="0"></label>
+        <label>tray Y<input type="number" id="py" min="0" max="1200" step="0.5" value="0"></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>Dimensions · mm</legend><div id="c-dims"></div></fieldset>
+    <fieldset><legend>Grid</legend><div id="c-grid"></div></fieldset>
+    <fieldset><legend>Walls &amp; floor · mm</legend><div id="c-walls"></div></fieldset>
+    <fieldset><legend>Style</legend>
+      <div id="c-style"></div>
+      <div class="colorrow"><input type="color" id="binColor" value="#d7d3c8" aria-label="Bin color"><span>bin color</span></div>
+    </fieldset>
+    <fieldset><legend>Features</legend>
+      <label class="tgl"><input type="checkbox" id="f-lip"> stacking lip <small>rim + base groove</small></label>
+      <label class="tgl"><input type="checkbox" id="f-tab"> label tab <small>45° chamfer</small></label>
+      <label class="tgl"><input type="checkbox" id="f-scoops"> finger scoops <small>supportless</small></label>
+      <label class="tgl"><input type="checkbox" id="f-floorHoles"> floor holes <small>saves filament</small></label>
+      <label class="tgl"><input type="checkbox" id="f-floorFillet"> floor fillet <small>molded look</small></label>
+    </fieldset>
+    <fieldset><legend>Printer fit</legend>
+      <select id="printer" aria-label="Printer">
+        <option value="">— select printer —</option>
+        <option value="180,180,180">Bambu A1 mini · 180×180×180</option>
+        <option value="256,256,256">Bambu A1 / P1 / P2S / X1 · 256×256×256</option>
+        <option value="250,210,220">Prusa MK3 / MK4 · 250×210×220</option>
+        <option value="220,220,250">Ender 3 · 220×220×250</option>
+        <option value="330,240,300">Ultimaker S5 · 330×240×300</option>
+        <option value="300,300,300">Large format · 300×300×300</option>
+      </select>
+      <div id="fit"></div>
+    </fieldset>
+    <p class="note">Print flat side down, no supports. 3 perimeters, 10–15% infill, 0.2 mm layers. PETG for large flat inserts (less warp), PLA otherwise. Slicer unions the overlapping shells on import.</p>
+  </aside>
+  <div id="stage">
+    <div id="warns"></div>
+    <div id="err"></div>
+    <div id="tblock" aria-live="polite">
+      <div class="tb-head"><span>PARAMETRIC BIN</span><span>UNITS&nbsp;MM</span></div>
+      <table>
+        <tr id="tbDrawerRow" style="display:none"><td>DRAWER</td><td id="t-drawer">—</td></tr>
+        <tr id="tbTrayRow" style="display:none"><td>TRAY</td><td id="t-tray">—</td></tr>
+        <tr><td>BODY</td><td id="t-body">—</td></tr>
+        <tr><td>CELLS</td><td id="t-cells">—</td></tr>
+        <tr><td>CELL ID</td><td id="t-id">—</td></tr>
+        <tr><td>VOLUME</td><td id="t-vol">—</td></tr>
+        <tr><td>MASS · PLA</td><td id="t-mass">—</td></tr>
+        <tr><td>MESH</td><td id="t-mesh">—</td></tr>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- SCRIPTS -->
+</body>
+</html>
