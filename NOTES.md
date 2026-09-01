@@ -18,9 +18,6 @@ behavior-preserving.
 
 ## Latent quirks, preserved verbatim
 
-- Drawer dimension inputs: clearing `dw`/`dd` falls back to the previous
-  value (`parseFloat(...) || drawer.w`), but clearing `dclr` falls back to
-  `0`. Inconsistent, kept.
 - `deleteTray` keeps the numeric selection index, so deleting a tray that
   comes before the selected one moves the selection to the next tray rather
   than following the originally selected tray.

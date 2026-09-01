@@ -88,9 +88,13 @@ document.getElementById('drawerOn').addEventListener('change', (e) => {
 });
 ['dw', 'dd', 'dclr'].forEach((id) => {
   document.getElementById(id).addEventListener('change', () => {
-    drawer.w = parseFloat(document.getElementById('dw').value) || drawer.w;
-    drawer.d = parseFloat(document.getElementById('dd').value) || drawer.d;
-    drawer.clr = parseFloat(document.getElementById('dclr').value) || 0;
+    const num = (nid, fallback) => {
+      const v = parseFloat(document.getElementById(nid).value);
+      return Number.isFinite(v) ? v : fallback;
+    };
+    drawer.w = num('dw', drawer.w);
+    drawer.d = num('dd', drawer.d);
+    drawer.clr = num('dclr', drawer.clr);
     requestRefit(); updateScene();
   });
 });
