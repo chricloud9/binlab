@@ -1181,8 +1181,12 @@ function addTray(p) {
 }
 function deleteTray(i) {
   disposeGroup(trays[i].group); disposeGroup(trays[i].warnBox);
+  const selected = trays[sel];
   trays.splice(i, 1);
-  sel = Math.min(sel, trays.length - 1);
+  // keep following the same tray object; fall back to the neighbor only when
+  // the selected tray itself was deleted
+  sel = trays.indexOf(selected);
+  if (sel === -1) sel = Math.min(i, trays.length - 1);
   writeInputs(trays[sel]); renderTrayBar(); updateScene();
 }
 

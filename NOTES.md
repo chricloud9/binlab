@@ -18,7 +18,4 @@ behavior-preserving.
 
 ## Latent quirks, preserved verbatim
 
-- `deleteTray` keeps the numeric selection index, so deleting a tray that
-  comes before the selected one moves the selection to the next tray rather
-  than following the originally selected tray.
 - `parseState` silently caps a shared layout at 24 trays.
