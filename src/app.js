@@ -4,7 +4,8 @@
 
 import { buildParts, computeStats, exportSTL } from './geometry.js';
 import {
-  fmt, nextSpot, snapAxis, emptyRectAt, layoutIssues, serializeState, parseState
+  fmt, nextSpot, snapAxis, clampToEnvelope, emptyRectAt, layoutIssues,
+  serializeState, parseState
 } from './layout.js';
 import {
   canvas, planePoint, pickTray, setSpin, orbitRotate, orbitZoom, requestRefit,
@@ -95,7 +96,11 @@ document.getElementById('drawerOn').addEventListener('change', (e) => {
 });
 ['px', 'py'].forEach((id, k) => {
   document.getElementById(id).addEventListener('change', (e) => {
-    trays[sel][k === 0 ? 'x' : 'y'] = Math.max(0, parseFloat(e.target.value) || 0);
+    const t = trays[sel], u = usable();
+    const v = clampToEnvelope(parseFloat(e.target.value) || 0,
+      k === 0 ? t.p.width : t.p.depth, k === 0 ? u.w : u.d);
+    t[k === 0 ? 'x' : 'y'] = v;
+    e.target.value = v;
     updateScene();
   });
 });
@@ -243,8 +248,8 @@ canvas.addEventListener('pointermove', (e) => {
     const uu = usable(), w = drag.t.p.width, d = drag.t.p.depth;
     const nx = snapAxis(trays, pp.mx - drag.offX + uu.w / 2, w, uu.w, drag.t, 'x');
     const ny = snapAxis(trays, pp.my - drag.offY + uu.d / 2, d, uu.d, drag.t, 'y');
-    drag.t.x = Math.round(Math.max(0, Math.min(Math.max(0, uu.w - w), nx)) * 2) / 2;
-    drag.t.y = Math.round(Math.max(0, Math.min(Math.max(0, uu.d - d), ny)) * 2) / 2;
+    drag.t.x = clampToEnvelope(nx, w, uu.w);
+    drag.t.y = clampToEnvelope(ny, d, uu.d);
     document.getElementById('px').value = drag.t.x;
     document.getElementById('py').value = drag.t.y;
     drag.t.group.position.set(-uu.w / 2 + drag.t.x + w / 2, -uu.d / 2 + drag.t.y + d / 2, 0);

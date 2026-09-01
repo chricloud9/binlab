@@ -53,6 +53,18 @@ export function nextSpot(trays, env, w, d) {
 }
 
 /**
+ * Clamp a tray position into the envelope on one axis and snap it to the
+ * 0.5 mm grid — the same rule dragging uses, shared by the typed X/Y inputs.
+ * @param {number} v proposed position on the axis
+ * @param {number} size tray extent on the axis
+ * @param {number} span envelope extent on the axis
+ * @returns {number}
+ */
+export function clampToEnvelope(v, size, span) {
+  return Math.round(Math.max(0, Math.min(Math.max(0, span - size), v)) * 2) / 2;
+}
+
+/**
  * Snap a dragged tray edge coordinate to nearby tray edges (butt or align)
  * and the envelope edges, within 4 mm.
  * @param {Array<object>} trays

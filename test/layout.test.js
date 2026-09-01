@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  overlapsAny, nextSpot, snapAxis, emptyRectAt, layoutIssues, serializeState, parseState
+  overlapsAny, nextSpot, snapAxis, clampToEnvelope, emptyRectAt, layoutIssues,
+  serializeState, parseState
 } from '../src/layout.js';
 
 const mk = (x, y, width, depth) => ({ x, y, p: { width, depth } });
@@ -39,6 +40,13 @@ test('snapAxis: butt, align, and envelope snaps within 4 mm only', () => {
   assert.equal(snapAxis(trays, 3.9, size, span, null, 'x'), 0, 'envelope start');
   assert.equal(snapAxis(trays, 275, size, span, null, 'x'), 278, 'envelope end (span - size)');
   assert.equal(snapAxis(trays, 154.5, size, span, null, 'x'), 154.5, 'no snap at 4.5 mm');
+});
+
+test('clampToEnvelope: envelope bounds and 0.5 mm grid, same rule as dragging', () => {
+  assert.equal(clampToEnvelope(-5, 100, 338), 0, 'below zero');
+  assert.equal(clampToEnvelope(500, 100, 338), 238, 'past the far edge -> span - size');
+  assert.equal(clampToEnvelope(120.3, 100, 338), 120.5, 'snaps to 0.5 mm');
+  assert.equal(clampToEnvelope(50, 400, 338), 0, 'tray larger than the envelope pins to 0');
 });
 
 test('emptyRectAt: inside a tray, L-shaped void, and slivers', () => {
