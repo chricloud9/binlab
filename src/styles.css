@@ -55,6 +55,7 @@ input[type=color]{width:34px;height:22px;border:1px solid var(--line);border-rad
 .duo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:4px 0}
 .duo label{display:flex;flex-direction:column;font-size:9px;letter-spacing:.06em;color:var(--ink-soft);gap:2px}
 .duo input[type=number]{width:100%}
+#drawerDims{grid-template-columns:repeat(4,1fr)}
 #traybar{display:flex;gap:4px;flex-wrap:wrap;margin:7px 0 3px}
 #traybar button{font-family:var(--mono);font-size:10px;padding:4px 8px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;border-radius:3px}
 #traybar button.active{background:var(--blue);border-color:var(--blue);color:#fff}

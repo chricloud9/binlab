@@ -98,13 +98,17 @@ test('state round-trip and malformed hashes', () => {
   };
   const defaults = { drawer: { w: 340, d: 332.5, clr: 2 }, params };
   const state = {
-    drawer: { on: true, w: 340, d: 332.5, clr: 2 },
+    drawer: { on: true, w: 340, d: 332.5, h: 80, clr: 2 },
     trays: [
       { x: 0, y: 0, p: { ...params } },
       { x: 196, y: 0, p: { ...params, width: 142, lip: true } }
     ]
   };
   assert.deepEqual(parseState(serializeState(state), defaults), state);
+  // drawer height is optional: absent or non-positive reads back as null
+  const noH = { ...state, drawer: { ...state.drawer, h: null } };
+  assert.deepEqual(parseState(serializeState(noH), defaults), noH);
+  assert.equal(parseState('#' + encodeURIComponent('{"d":{"on":true,"h":-5},"t":[{"x":0,"y":0}]}'), defaults).drawer.h, null);
 
   assert.equal(parseState('', defaults), false);
   assert.equal(parseState('#', defaults), false);

@@ -78,7 +78,7 @@ function makeTray(x, y, p) {
 }
 let trays = [makeTray(0, 0, defaultParams())];
 let sel = 0;
-const drawer = { on: false, w: 340, d: 332.5, clr: 2 };
+const drawer = { on: false, w: 340, d: 332.5, h: null, clr: 2 }; // h: optional, drives the stack-layer estimate
 
 function usable() { return { w: drawer.w - drawer.clr, d: drawer.d - drawer.clr }; }
 
@@ -87,7 +87,7 @@ document.getElementById('drawerOn').addEventListener('change', (e) => {
   requestRefit();
   renderTrayBar(); updateScene();
 });
-['dw', 'dd', 'dclr'].forEach((id) => {
+['dw', 'dd', 'dh', 'dclr'].forEach((id) => {
   document.getElementById(id).addEventListener('change', () => {
     const num = (nid, fallback) => {
       const v = parseFloat(document.getElementById(nid).value);
@@ -95,6 +95,8 @@ document.getElementById('drawerOn').addEventListener('change', (e) => {
     };
     drawer.w = num('dw', drawer.w);
     drawer.d = num('dd', drawer.d);
+    const h = parseFloat(document.getElementById('dh').value);
+    drawer.h = h > 0 ? h : null; // blank clears the height
     drawer.clr = num('dclr', drawer.clr);
     requestRefit(); updateScene();
   });
@@ -394,6 +396,19 @@ function updateScene() {
   }
   if (st.meta && st.stats) {
     document.getElementById('t-body').textContent = fmt(st.p.width, 0) + ' × ' + fmt(st.p.depth, 0) + ' × ' + fmt(st.meta.totalH);
+    document.getElementById('tbStackRow').style.display = st.meta.lip ? '' : 'none';
+    if (st.meta.lip) {
+      // n stacked bins stand (n - 1) * stackPitch + totalH tall: each added bin
+      // raises the stack by one pitch, and the top bin's rim still protrudes
+      const pitch = st.meta.stackPitch;
+      let txt = 'pitch ' + fmt(pitch) + ' · 2× = ' + fmt(pitch + st.meta.totalH);
+      // layers that fit a known drawer height: the top bin must clear it rim included
+      if (drawer.on && drawer.h) {
+        const layers = Math.floor((drawer.h - st.meta.totalH) / pitch) + 1;
+        txt += ' · ' + (layers >= 1 ? layers + (layers === 1 ? ' layer fits' : ' layers fit') : 'too tall for drawer');
+      }
+      document.getElementById('t-stack').textContent = txt;
+    }
     document.getElementById('t-cells').textContent = st.meta.compartments + ' · ' + st.p.cols + '×' + st.p.rows;
     document.getElementById('t-id').textContent = fmt(st.meta.cavW) + ' × ' + fmt(st.meta.cavD) + ' × ' + fmt(st.meta.cavH);
     document.getElementById('t-vol').textContent = (st.stats.volumeMM3 / 1000).toFixed(1) + ' cm³';
@@ -483,10 +498,11 @@ function stateToHash() {
 function stateFromHash() {
   const s = parseState(location.hash, { drawer: { w: drawer.w, d: drawer.d, clr: drawer.clr }, params: defaultParams() });
   if (!s) return false;
-  drawer.on = s.drawer.on; drawer.w = s.drawer.w; drawer.d = s.drawer.d; drawer.clr = s.drawer.clr;
+  drawer.on = s.drawer.on; drawer.w = s.drawer.w; drawer.d = s.drawer.d; drawer.h = s.drawer.h; drawer.clr = s.drawer.clr;
   document.getElementById('drawerOn').checked = drawer.on;
   document.getElementById('dw').value = drawer.w;
   document.getElementById('dd').value = drawer.d;
+  document.getElementById('dh').value = drawer.h === null ? '' : drawer.h;
   document.getElementById('dclr').value = drawer.clr;
   trays = s.trays.map((t) => makeTray(t.x, t.y, t.p));
   sel = 0;

@@ -67,6 +67,7 @@ input[type=color]{width:34px;height:22px;border:1px solid var(--line);border-rad
 .duo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:4px 0}
 .duo label{display:flex;flex-direction:column;font-size:9px;letter-spacing:.06em;color:var(--ink-soft);gap:2px}
 .duo input[type=number]{width:100%}
+#drawerDims{grid-template-columns:repeat(4,1fr)}
 #traybar{display:flex;gap:4px;flex-wrap:wrap;margin:7px 0 3px}
 #traybar button{font-family:var(--mono);font-size:10px;padding:4px 8px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);cursor:pointer;border-radius:3px}
 #traybar button.active{background:var(--blue);border-color:var(--blue);color:#fff}
@@ -117,6 +118,7 @@ input[type=color]{width:34px;height:22px;border:1px solid var(--line);border-rad
       <div class="duo" id="drawerDims">
         <label>drawer W<input type="number" id="dw" min="60" max="1200" step="0.5" value="340"></label>
         <label>drawer D<input type="number" id="dd" min="60" max="1200" step="0.5" value="332.5"></label>
+        <label>drawer H<input type="number" id="dh" min="10" max="600" step="0.5" placeholder="—" aria-label="drawer height (optional, for stack layers)"></label>
         <label>clearance<input type="number" id="dclr" min="0" max="6" step="0.5" value="2"></label>
       </div>
       <div id="traybar"></div>
@@ -163,6 +165,7 @@ input[type=color]{width:34px;height:22px;border:1px solid var(--line);border-rad
         <tr id="tbDrawerRow" style="display:none"><td>DRAWER</td><td id="t-drawer">—</td></tr>
         <tr id="tbTrayRow" style="display:none"><td>TRAY</td><td id="t-tray">—</td></tr>
         <tr><td>BODY</td><td id="t-body">—</td></tr>
+        <tr id="tbStackRow" style="display:none"><td>STACK</td><td id="t-stack">—</td></tr>
         <tr><td>CELLS</td><td id="t-cells">—</td></tr>
         <tr><td>CELL ID</td><td id="t-id">—</td></tr>
         <tr><td>VOLUME</td><td id="t-vol">—</td></tr>
@@ -825,13 +828,13 @@ function layoutIssues(trays, env) {
 
 /**
  * Serialize drawer + tray state to a URL hash string.
- * @param {{drawer: {on: boolean, w: number, d: number, clr: number},
+ * @param {{drawer: {on: boolean, w: number, d: number, h: number|null, clr: number},
  *   trays: Array<{x: number, y: number, p: object}>}} state
  * @returns {string} '#' + URI-encoded JSON
  */
 function serializeState(state) {
   const s = {
-    d: { on: state.drawer.on, w: state.drawer.w, d: state.drawer.d, clr: state.drawer.clr },
+    d: { on: state.drawer.on, w: state.drawer.w, d: state.drawer.d, h: state.drawer.h, clr: state.drawer.clr },
     t: state.trays.map((t) => ({ x: t.x, y: t.y, p: t.p }))
   };
   return '#' + encodeURIComponent(JSON.stringify(s));
@@ -843,7 +846,7 @@ function serializeState(state) {
  * @param {string} hash location.hash, '#' included
  * @param {{drawer: {w: number, d: number, clr: number}, params: object}} defaults
  *   fallback drawer dims and a template of valid tray parameters
- * @returns {{drawer: {on: boolean, w: number, d: number, clr: number},
+ * @returns {{drawer: {on: boolean, w: number, d: number, h: number|null, clr: number},
  *   trays: Array<{x: number, y: number, p: object}>}|false} false if the hash
  *   is empty or malformed (never throws)
  */
@@ -852,10 +855,12 @@ function parseState(hash, defaults) {
     if (!hash || hash.length < 3) return false;
     const s = JSON.parse(decodeURIComponent(hash.slice(1)));
     if (!s || !s.t || !s.t.length) return false;
-    const drawer = { on: !!(s.d && s.d.on), w: defaults.drawer.w, d: defaults.drawer.d, clr: defaults.drawer.clr };
+    // drawer height is optional (null = unknown, no stack-layer estimate)
+    const drawer = { on: !!(s.d && s.d.on), w: defaults.drawer.w, d: defaults.drawer.d, h: null, clr: defaults.drawer.clr };
     if (s.d) {
       drawer.w = +s.d.w || drawer.w;
       drawer.d = +s.d.d || drawer.d;
+      drawer.h = (+s.d.h > 0) ? +s.d.h : null;
       drawer.clr = (+s.d.clr >= 0) ? +s.d.clr : drawer.clr;
     }
     // hard cap: a hand-edited or hostile hash must not create an unbounded
@@ -1233,7 +1238,7 @@ function makeTray(x, y, p) {
 }
 let trays = [makeTray(0, 0, defaultParams())];
 let sel = 0;
-const drawer = { on: false, w: 340, d: 332.5, clr: 2 };
+const drawer = { on: false, w: 340, d: 332.5, h: null, clr: 2 }; // h: optional, drives the stack-layer estimate
 
 function usable() { return { w: drawer.w - drawer.clr, d: drawer.d - drawer.clr }; }
 
@@ -1242,7 +1247,7 @@ document.getElementById('drawerOn').addEventListener('change', (e) => {
   requestRefit();
   renderTrayBar(); updateScene();
 });
-['dw', 'dd', 'dclr'].forEach((id) => {
+['dw', 'dd', 'dh', 'dclr'].forEach((id) => {
   document.getElementById(id).addEventListener('change', () => {
     const num = (nid, fallback) => {
       const v = parseFloat(document.getElementById(nid).value);
@@ -1250,6 +1255,8 @@ document.getElementById('drawerOn').addEventListener('change', (e) => {
     };
     drawer.w = num('dw', drawer.w);
     drawer.d = num('dd', drawer.d);
+    const h = parseFloat(document.getElementById('dh').value);
+    drawer.h = h > 0 ? h : null; // blank clears the height
     drawer.clr = num('dclr', drawer.clr);
     requestRefit(); updateScene();
   });
@@ -1549,6 +1556,19 @@ function updateScene() {
   }
   if (st.meta && st.stats) {
     document.getElementById('t-body').textContent = fmt(st.p.width, 0) + ' × ' + fmt(st.p.depth, 0) + ' × ' + fmt(st.meta.totalH);
+    document.getElementById('tbStackRow').style.display = st.meta.lip ? '' : 'none';
+    if (st.meta.lip) {
+      // n stacked bins stand (n - 1) * stackPitch + totalH tall: each added bin
+      // raises the stack by one pitch, and the top bin's rim still protrudes
+      const pitch = st.meta.stackPitch;
+      let txt = 'pitch ' + fmt(pitch) + ' · 2× = ' + fmt(pitch + st.meta.totalH);
+      // layers that fit a known drawer height: the top bin must clear it rim included
+      if (drawer.on && drawer.h) {
+        const layers = Math.floor((drawer.h - st.meta.totalH) / pitch) + 1;
+        txt += ' · ' + (layers >= 1 ? layers + (layers === 1 ? ' layer fits' : ' layers fit') : 'too tall for drawer');
+      }
+      document.getElementById('t-stack').textContent = txt;
+    }
     document.getElementById('t-cells').textContent = st.meta.compartments + ' · ' + st.p.cols + '×' + st.p.rows;
     document.getElementById('t-id').textContent = fmt(st.meta.cavW) + ' × ' + fmt(st.meta.cavD) + ' × ' + fmt(st.meta.cavH);
     document.getElementById('t-vol').textContent = (st.stats.volumeMM3 / 1000).toFixed(1) + ' cm³';
@@ -1638,10 +1658,11 @@ function stateToHash() {
 function stateFromHash() {
   const s = parseState(location.hash, { drawer: { w: drawer.w, d: drawer.d, clr: drawer.clr }, params: defaultParams() });
   if (!s) return false;
-  drawer.on = s.drawer.on; drawer.w = s.drawer.w; drawer.d = s.drawer.d; drawer.clr = s.drawer.clr;
+  drawer.on = s.drawer.on; drawer.w = s.drawer.w; drawer.d = s.drawer.d; drawer.h = s.drawer.h; drawer.clr = s.drawer.clr;
   document.getElementById('drawerOn').checked = drawer.on;
   document.getElementById('dw').value = drawer.w;
   document.getElementById('dd').value = drawer.d;
+  document.getElementById('dh').value = drawer.h === null ? '' : drawer.h;
   document.getElementById('dclr').value = drawer.clr;
   trays = s.trays.map((t) => makeTray(t.x, t.y, t.p));
   sel = 0;

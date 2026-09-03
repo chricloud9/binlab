@@ -179,13 +179,13 @@ export function layoutIssues(trays, env) {
 
 /**
  * Serialize drawer + tray state to a URL hash string.
- * @param {{drawer: {on: boolean, w: number, d: number, clr: number},
+ * @param {{drawer: {on: boolean, w: number, d: number, h: number|null, clr: number},
  *   trays: Array<{x: number, y: number, p: object}>}} state
  * @returns {string} '#' + URI-encoded JSON
  */
 export function serializeState(state) {
   const s = {
-    d: { on: state.drawer.on, w: state.drawer.w, d: state.drawer.d, clr: state.drawer.clr },
+    d: { on: state.drawer.on, w: state.drawer.w, d: state.drawer.d, h: state.drawer.h, clr: state.drawer.clr },
     t: state.trays.map((t) => ({ x: t.x, y: t.y, p: t.p }))
   };
   return '#' + encodeURIComponent(JSON.stringify(s));
@@ -197,7 +197,7 @@ export function serializeState(state) {
  * @param {string} hash location.hash, '#' included
  * @param {{drawer: {w: number, d: number, clr: number}, params: object}} defaults
  *   fallback drawer dims and a template of valid tray parameters
- * @returns {{drawer: {on: boolean, w: number, d: number, clr: number},
+ * @returns {{drawer: {on: boolean, w: number, d: number, h: number|null, clr: number},
  *   trays: Array<{x: number, y: number, p: object}>}|false} false if the hash
  *   is empty or malformed (never throws)
  */
@@ -206,10 +206,12 @@ export function parseState(hash, defaults) {
     if (!hash || hash.length < 3) return false;
     const s = JSON.parse(decodeURIComponent(hash.slice(1)));
     if (!s || !s.t || !s.t.length) return false;
-    const drawer = { on: !!(s.d && s.d.on), w: defaults.drawer.w, d: defaults.drawer.d, clr: defaults.drawer.clr };
+    // drawer height is optional (null = unknown, no stack-layer estimate)
+    const drawer = { on: !!(s.d && s.d.on), w: defaults.drawer.w, d: defaults.drawer.d, h: null, clr: defaults.drawer.clr };
     if (s.d) {
       drawer.w = +s.d.w || drawer.w;
       drawer.d = +s.d.d || drawer.d;
+      drawer.h = (+s.d.h > 0) ? +s.d.h : null;
       drawer.clr = (+s.d.clr >= 0) ? +s.d.clr : drawer.clr;
     }
     // hard cap: a hand-edited or hostile hash must not create an unbounded
