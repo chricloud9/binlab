@@ -173,15 +173,21 @@ export function buildParts(p) {
   for (let i = 0; i < cols; i++) xs.push(x0 + i * (cavW + div));
   for (let j = 0; j < rows; j++) ys.push(y0 + j * (cavD + div));
 
-  // ---- stacking lip parameters ----
-  // The rim of this bin (outer inset SKIRT+CLR, width rimW) must drop into the
-  // base groove of the bin above (between insets SKIRT-OV and grooveInnerInset)
-  // with CLR play on each side.
+  // ---- stacking lip parameters (v2) ----
+  // The rim of this bin (outer inset SKIRT+CLR, width rimW) drops into the
+  // base groove of the bin above (between insets SKIRT and grooveInnerInset)
+  // with CLR play on each side in the straight sections. Both rim tip and
+  // groove roof carry 45-degree chamfers; the bin seats face-on-face on them.
   let lip = !!p.lip;
-  const SKIRT = 0.9, CLR = 0.25, RIM_H = 1.8;
-  const rimOuterInset = SKIRT + CLR;                       // 1.15
+  const SKIRT = 1.2;                 // skirt ring width; bed face after the 0.45 chamfer = 0.75 mm (two lines)
+  const CLR = 0.25;                  // straight-section clearance per side
+  const RIM_H = 1.6;                 // rim height above the wall top
+  const rimOuterInset = SKIRT + CLR;                       // 1.45
   const rimW = clamp(wall - rimOuterInset - 0.15, 1.1, 1.8);
-  const grooveDepth = Math.min(RIM_H - 0.3, floor - 0.8);
+  // rim tip chamfer: leaves a 0.7 mm tip flat, never under 0.2 mm of chamfer
+  const ch2 = clamp((rimW - 0.7) / 2, 0.2, 0.6);
+  const grooveDepthTarget = RIM_H - 0.05;                  // 1.55
+  const grooveDepth = Math.min(grooveDepthTarget, floor - 0.8);
   if (lip && grooveDepth < 0.6) {
     lip = false;
     warnings.push('Stacking lip disabled: floor under 1.4 mm cannot take the base groove.');
@@ -251,7 +257,6 @@ export function buildParts(p) {
     center.holes = holePaths;
     parts.push({ name: 'center', geom: extrudeZ(center, floor, 0) });
     // rim: trapezoid cross-section, 45-degree chamfered tip for self-centering
-    const ch2 = Math.max(0, Math.min(0.6, (rimW - 0.4) / 2));
     parts.push({ name: 'rim', geom: sweepSolid(W, D, outerR4, [
       [rimOuterInset, H - OV], [rimOuterInset + rimW, H - OV],
       [rimOuterInset + rimW - ch2, H + RIM_H], [rimOuterInset + ch2, H + RIM_H]
