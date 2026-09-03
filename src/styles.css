@@ -23,8 +23,9 @@ header{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:
 #dl{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.06em;padding:9px 16px;background:var(--blue);color:#fff;border:none;border-radius:3px;cursor:pointer}
 #dl:hover{background:var(--blue-deep)}
 #dl:disabled{background:var(--line);cursor:not-allowed}
-#share{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.06em;padding:8px 14px;background:#fff;color:var(--blue);border:1px solid var(--blue);border-radius:3px;cursor:pointer}
-#share:hover{background:var(--panel-2)}
+#share,#dlSel{font-family:var(--mono);font-weight:600;font-size:12px;letter-spacing:.06em;padding:8px 14px;background:#fff;color:var(--blue);border:1px solid var(--blue);border-radius:3px;cursor:pointer}
+#share:hover,#dlSel:hover{background:var(--panel-2)}
+#dlSel:disabled{color:var(--ink-soft);border-color:var(--line);cursor:not-allowed}
 
 /* layout */
 main{flex:1;display:flex;min-height:0}

@@ -16,7 +16,7 @@ is one HTML file.
 - **Drawer layout mode**: define your drawer, drag trays with magnetic edge snapping, double-click empty space to auto-fill it with a tray, live overlap/out-of-bounds validation, coverage stats
 - Per-tray printer bed fit checking (Bambu, Prusa, Ultimaker, Ender presets)
 - Layouts serialize into the URL — the Share button copies a link that reopens your exact design
-- Binary STL export per tray, sized exactly, z-up, millimeters
+- Binary STL export, sized exactly, z-up, millimeters — in drawer mode either the whole plate as one STL (every tray at its drawer position, the default) or the selected tray alone
 
 ## Build & test
 

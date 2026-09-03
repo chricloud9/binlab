@@ -16,6 +16,7 @@
   <div class="mark"><b>BINLAB</b><span>BIN &amp; TRAY GENERATOR</span></div>
   <div class="presets" id="presets" role="group" aria-label="Presets"></div>
   <button id="share">Share</button>
+  <button id="dlSel" style="display:none">T1 only</button>
   <button id="dl">Download STL</button>
 </header>
 <main>
@@ -41,7 +42,7 @@
       <div class="colorrow"><input type="color" id="binColor" value="#d7d3c8" aria-label="Bin color"><span>bin color</span></div>
     </fieldset>
     <fieldset><legend>Features</legend>
-      <label class="tgl"><input type="checkbox" id="f-lip"> stacking lip <small>rim + base groove</small></label>
+      <label class="tgl"><input type="checkbox" id="f-lip" checked> stacking lip <small>rim + base groove</small></label>
       <label class="tgl"><input type="checkbox" id="f-tab"> label tab <small>45° chamfer</small></label>
       <label class="tgl"><input type="checkbox" id="f-scoops"> finger scoops <small>supportless</small></label>
       <label class="tgl"><input type="checkbox" id="f-floorHoles"> floor holes <small>saves filament</small></label>

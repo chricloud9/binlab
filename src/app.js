@@ -33,7 +33,7 @@ const inputs = {};
 function defaultParams() {
   const p = {};
   DEFS.forEach((d) => { p[d.id] = d.val; });
-  FLAGS.forEach((f) => { p[f] = false; });
+  FLAGS.forEach((f) => { p[f] = f === 'lip'; });
   return p;
 }
 function readParams() {
@@ -374,9 +374,14 @@ function updateScene() {
   // title block
   const errEl = document.getElementById('err');
   const dl = document.getElementById('dl');
-  if (st.err) { errEl.textContent = 'T' + (sel + 1) + ': ' + st.err; errEl.style.display = 'block'; dl.disabled = true; }
-  else { errEl.style.display = 'none'; dl.disabled = false; }
-  dl.textContent = drawer.on ? 'Download STL · T' + (sel + 1) : 'Download STL';
+  const dlSel = document.getElementById('dlSel');
+  if (st.err) { errEl.textContent = 'T' + (sel + 1) + ': ' + st.err; errEl.style.display = 'block'; }
+  else { errEl.style.display = 'none'; }
+  dl.disabled = drawer.on ? !trays.some((t) => t.parts) : !!st.err;
+  dl.textContent = drawer.on ? 'Download STL · All' : 'Download STL';
+  dlSel.style.display = drawer.on ? '' : 'none';
+  dlSel.disabled = !!st.err;
+  dlSel.textContent = 'T' + (sel + 1) + ' only';
 
   document.getElementById('tbDrawerRow').style.display = drawer.on ? '' : 'none';
   document.getElementById('tbTrayRow').style.display = drawer.on ? '' : 'none';
@@ -425,19 +430,47 @@ function updateFit() {
 }
 
 /* ---------------- download ---------------- */
-document.getElementById('dl').addEventListener('click', () => {
-  const st = trays[sel];
-  if (!st.parts) return;
-  const buf = exportSTL(st.parts);
+function downloadSTL(parts, name) {
+  const buf = exportSTL(parts);
   const blob = new Blob([buf], { type: 'model/stl' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  const p = st.p;
-  a.download = (drawer.on ? 'tray' + (sel + 1) + '_' : 'bin_') + p.width + 'x' + p.depth + 'x' + p.height + '_' + p.cols + 'x' + p.rows + '.stl';
+  a.download = name;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+function trayFileName(t, i) {
+  const p = t.p;
+  return (drawer.on ? 'tray' + (i + 1) + '_' : 'bin_') + p.width + 'x' + p.depth + 'x' + p.height + '_' + p.cols + 'x' + p.rows + '.stl';
+}
+function exportSelected() {
+  const st = trays[sel];
+  if (st.parts) downloadSTL(st.parts, trayFileName(st, sel));
+}
+// export all: one STL holding every tray as its own shells, each translated to
+// its drawer position, so the file is the plate exactly as laid out on screen
+function exportAll() {
+  const u = usable();
+  const all = [];
+  let n = 0;
+  trays.forEach((t) => {
+    if (!t.parts) return;
+    n++;
+    t.parts.forEach((p) => {
+      const geom = p.geom.clone();
+      geom.translate(-u.w / 2 + t.x + t.p.width / 2, -u.d / 2 + t.y + t.p.depth / 2, 0);
+      all.push({ name: p.name, geom });
+    });
+  });
+  if (!n) return;
+  downloadSTL(all, 'plate_' + fmt(drawer.w, 0) + 'x' + fmt(drawer.d, 0) + '_' + n + 'trays.stl');
+  all.forEach((p) => { p.geom.dispose(); });
+}
+document.getElementById('dl').addEventListener('click', () => {
+  if (drawer.on) exportAll(); else exportSelected();
 });
+document.getElementById('dlSel').addEventListener('click', exportSelected);
 
 /* ---------------- share / URL state ---------------- */
 let hashT = null;
