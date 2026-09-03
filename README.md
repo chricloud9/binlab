@@ -11,7 +11,7 @@ is one HTML file.
 ## Features
 
 - Fully parametric: dimensions, compartment grid, wall/floor/divider thickness, decoupled outer/inner corner radii
-- Stacking lip: trapezoid rim with 45° lead-in chamfers and a matching base groove, so identical trays self-center and interlock
+- Stacking lip: rim with 45° tip chamfers seats face-on-face in a 45° gabled base groove, so identical trays self-center with zero lateral play and the groove prints without bridging; the title block reports the stack pitch and how many layers fit a drawer of known height
 - 45° bottom edge chamfer (hides elephant's foot, slides into drawers), optional interior floor fillets, finger scoops, label tabs, weight-saving floor holes
 - **Drawer layout mode**: define your drawer, drag trays with magnetic edge snapping, double-click empty space to auto-fill it with a tray, live overlap/out-of-bounds validation, coverage stats
 - Per-tray printer bed fit checking (Bambu, Prusa, Ultimaker, Ender presets)
@@ -37,7 +37,7 @@ script tag, and opens straight from `file://`. Deployment is the
 
 - **`src/geometry.js`** — the pure geometry engine. `buildParts(params)` turns one
   tray's parameters into named, closed solids (`walls`, `floor`/`collar` or
-  `skirt`/`groove`/`center`/`rim`, plus `fillet`, `scoop`, `tab`), with
+  `skirt`/`groove`/`center`/`rim`/`wedge`, plus `fillet`, `scoop`, `tab`), with
   `computeStats`, `partVolume`, and binary `exportSTL` alongside. No DOM; its only
   dependency is a global `THREE` for Shape/ExtrudeGeometry plumbing, which is why
   the same file runs unmodified in the browser and under node in the tests.
@@ -65,10 +65,20 @@ Every shell is generated watertight with outward winding, and the slicer unions
 the overlapping shells on import. This keeps the geometry fast, dependency-free,
 and immune to CSG robustness bugs.
 
-The stacking interface: the rim insets 1.15 mm from the outer face, stands
-1.8 mm tall, and drops into the base groove with 0.25 mm lateral clearance; a
-corner-wall guard auto-raises corner compartment radii so large outer radii
-never thin the corner wall below its minimum.
+The stacking interface (v2): the rim insets 1.45 mm from the outer face, stands
+1.6 mm tall with vertical flanks and 0.2 mm 45° tip chamfers, and drops into a
+base groove 1.55 mm deep (floor 2.4 mm; shallower floors shorten it) with
+0.25 mm lateral clearance in the straight sections. The groove roof is a 45°
+gable whose chamfers are 0.5 mm longer than the rim's, so the bin above seats
+on the chamfer faces with its tip flat 0.25 mm under the 0.2 mm apex band and
+its skirt floating 0.3 mm over the wall top: stack pitch = height + 0.3 mm.
+On walls thinner than the rim's inner edge a 45° wedge carries the rim down to
+the cavity face. A corner-wall guard auto-raises corner compartment radii so
+large outer radii never thin the corner wall below its minimum.
+
+Known limitation: stacking assumes identical footprints. A 1×1 tray will not
+seat on a 2×2 (or any other size); that needs a grid-registered rim, which is
+a different system.
 
 ## Printing
 
@@ -84,8 +94,11 @@ union first.
 This refactor (monolith → modules + tests) was done with Claude. The geometry
 engine is validated by the test suite in `test/`: byte-for-byte STL fixture
 comparison across twelve presets, signed-volume watertightness checks, bounding
-box and STL structure checks, a lip-mating profile probe, and a raycast
-measurement of the corner-wall guard.
+box and STL structure checks, a raycast measurement of the corner-wall guard,
+and a stacking-lip suite that ray-probes the exported mesh: rim and groove
+profiles, 45° roof slopes, a two-bin mating simulation (seat height, contact
+confined to the chamfer faces, no interpenetration), a lateral-shift check for
+play, the thin-wall wedge, and the skirt bed face.
 
 ## License
 

@@ -22,11 +22,6 @@ const BASE = {
 };
 const ALL_FLAGS = { lip: true, tab: true, scoops: true, floorHoles: true, floorFillet: true };
 
-// Stacking lip v2 is being landed as a series of commits. Fixtures that carry
-// the lip are regenerated in the last commit of the series; until then their
-// byte comparison is deferred (every other fixture check still runs, and the
-// non-lip fixtures must stay byte-identical throughout).
-const LIP_V2_PENDING = true;
 const PRESETS = {};
 for (const [name, p] of Object.entries(BASE)) {
   PRESETS[name] = p;
@@ -73,9 +68,7 @@ for (const [name, p] of Object.entries(PRESETS)) {
 
     // the oracle: byte-for-byte identical to the frozen baseline
     const want = fs.readFileSync(path.join(fixturesDir, `${name}.stl`));
-    if (!(LIP_V2_PENDING && p.lip)) {
-      assert.ok(got.equals(want), `${name}.stl differs from fixture (${got.length} vs ${want.length} bytes)`);
-    }
+    assert.ok(got.equals(want), `${name}.stl differs from fixture (${got.length} vs ${want.length} bytes)`);
 
     // every part is a closed, outward-wound shell
     for (const part of out.parts) {
