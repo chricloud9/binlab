@@ -188,6 +188,11 @@ export function buildParts(p) {
   const ch2 = clamp((rimW - 0.7) / 2, 0.2, 0.6);
   const grooveDepthTarget = RIM_H - 0.05;                  // 1.55
   const grooveDepth = Math.min(grooveDepthTarget, floor - 0.8);
+  // Groove roof chamfer. The rim base sits CLR inside the groove mouth, so the
+  // two 45-degree faces coincide only when the roof chamfer is ch2 + 2*CLR:
+  // the rim then seats on its chamfers with the tip flat CLR below the apex
+  // band. Thin floors cap it so at least 0.3 mm of vertical groove wall stays.
+  const cg = Math.min(ch2 + 2 * CLR, grooveDepth - 0.3);
   if (lip && grooveDepth < 0.6) {
     lip = false;
     warnings.push('Stacking lip disabled: floor under 1.4 mm cannot take the base groove.');
@@ -248,10 +253,20 @@ export function buildParts(p) {
       ? [[chB, 0], [0, chB], [0, floor], [SKIRT, floor], [SKIRT, 0]]
       : [[0, 0], [0, floor], [SKIRT, floor], [SKIRT, 0]];
     parts.push({ name: 'skirt', geom: sweepSolid(W, D, outerR4, skirtCross) });
-    // groove ring: thinned floor where the rim of the bin below seats
-    const groove = insetRR(THREE.Shape, W, D, r, SKIRT - OV);
-    groove.holes.push(insetRR(THREE.Path, W, D, r, grooveInnerInset + OV));
-    parts.push({ name: 'groove', geom: extrudeZ(groove, floor - grooveDepth, grooveDepth) });
+    // groove ring: thinned floor over the groove, its underside a 45-degree
+    // gable so the void prints without bridging. Read from the bed upward the
+    // void has vertical walls to z = grooveDepth - cg, then 45-degree roof
+    // faces converging on a flat apex band at z = grooveDepth. The outer and
+    // inner edges run OV into the skirt and center slab; the roof lines are
+    // extended by OV along their 45-degree direction so the slope is exact.
+    parts.push({ name: 'groove', geom: sweepSolid(W, D, outerR4, [
+      [SKIRT - OV, floor],
+      [SKIRT - OV, grooveDepth - cg - OV],
+      [SKIRT + cg, grooveDepth],
+      [grooveInnerInset - cg, grooveDepth],
+      [grooveInnerInset + OV, grooveDepth - cg - OV],
+      [grooveInnerInset + OV, floor]
+    ]) });
     // center slab: full-height floor, carries the holes
     const center = insetRR(THREE.Shape, W, D, r, grooveInnerInset);
     center.holes = holePaths;
