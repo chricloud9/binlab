@@ -279,15 +279,19 @@ export function buildParts(p) {
     const center = insetRR(THREE.Shape, W, D, r, grooveInnerInset);
     center.holes = holePaths;
     parts.push({ name: 'center', geom: extrudeZ(center, floor, 0) });
-    // rim: trapezoid cross-section, 45-degree chamfered tip for self-centering
+    // rim: vertical flanks with true 45-degree tip chamfers (ch2 by ch2), so
+    // the chamfer faces are parallel to the groove roof and the bin above
+    // seats face-on-face on them, self-centering. The old 4-point trapezoid
+    // ran its flanks straight from base to tip, far steeper than 45 degrees.
+    const rimInner = rimOuterInset + rimW;
     parts.push({ name: 'rim', geom: sweepSolid(W, D, outerR4, [
-      [rimOuterInset, H - OV], [rimOuterInset + rimW, H - OV],
-      [rimOuterInset + rimW - ch2, H + RIM_H], [rimOuterInset + ch2, H + RIM_H]
+      [rimOuterInset, H - OV], [rimInner, H - OV],
+      [rimInner, H + RIM_H - ch2], [rimInner - ch2, H + RIM_H],
+      [rimOuterInset + ch2, H + RIM_H], [rimOuterInset, H + RIM_H - ch2]
     ]) });
     // rim support wedge: on walls thinner than the rim's inner edge the rim
     // would cantilever over the cavity, so a 45-degree triangle under its
     // inner edge carries it down to the cavity face (penetrating the wall by PEN)
-    const rimInner = rimOuterInset + rimW;
     if (wall < rimInner + 0.1) {
       const run = rimInner + OV - (wall - PEN);
       parts.push({ name: 'wedge', geom: sweepSolid(W, D, outerR4, [
