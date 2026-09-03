@@ -193,11 +193,20 @@ export function buildParts(p) {
   // the rim then seats on its chamfers with the tip flat CLR below the apex
   // band. Thin floors cap it so at least 0.3 mm of vertical groove wall stays.
   const cg = Math.min(ch2 + 2 * CLR, grooveDepth - 0.3);
+  const grooveInnerInset = rimOuterInset + rimW + CLR;
+  // Seating: the rim chamfers meet the roof chamfers with the tip flat tipGap
+  // below the apex band (CLR unless a thin floor capped cg, then the tip lands
+  // on the apex first). Upper base above the lower wall top = lipFloat.
+  const tipGap = Math.max(0, cg - ch2 - CLR);
+  const lipFloat = RIM_H - grooveDepth + tipGap;
+  const stackPitch = H + lipFloat;              // height added per stacked bin
+  const lipEngagement = grooveDepth - tipGap;   // rim depth inside the groove at seat
   if (lip && grooveDepth < 0.6) {
     lip = false;
     warnings.push('Stacking lip disabled: floor under 1.4 mm cannot take the base groove.');
+  } else if (lip && grooveDepth < 1.2) {
+    warnings.push('Stacking lip engagement is only ' + lipEngagement.toFixed(2) + ' mm; floor \u2265 2.4 mm recommended.');
   }
-  const grooveInnerInset = rimOuterInset + rimW + CLR;
 
   const parts = [];
 
@@ -361,7 +370,12 @@ export function buildParts(p) {
       cells,
       compartments: cols * rows,
       totalH: H + (lip ? RIM_H : 0),
-      lip
+      lip,
+      // stacking interface (null without the lip)
+      stackPitch: lip ? stackPitch : null,
+      lipFloat: lip ? lipFloat : null,
+      lipEngagement: lip ? lipEngagement : null,
+      grooveDepth: lip ? grooveDepth : null
     }
   };
 }
