@@ -155,13 +155,18 @@ test('meta.cells enumerates compartments row-major with cavity dims', () => {
   assert.ok(Math.abs(last.cx - ex) < 1e-9 && Math.abs(last.cy - ey) < 1e-9, 'back-right corner cell');
 });
 
-test('thin-wall lip warning gates at wall < 1.8', () => {
-  const lipWarnings = (p) => buildParts(p).warnings.filter((w) => w.includes('Stacking lip rim overhangs'));
-  assert.equal(lipWarnings(PRESETS.trayA).length, 0, 'no warning at wall 2.0');
-  const thin = lipWarnings({ ...PRESETS.trayA, wall: 1.7 });
-  assert.equal(thin.length, 1);
-  assert.equal(thin[0], 'Stacking lip rim overhangs the cavity slightly on walls under 1.8 mm.');
-  assert.equal(lipWarnings({ ...PRESETS.trayA, lip: false, wall: 1.7 }).length, 0, 'lip off never warns');
+test('thin walls get a rim support wedge instead of an overhang warning', () => {
+  const build = (p) => buildParts(p);
+  const hasWedge = (out) => out.parts.some((part) => part.name === 'wedge');
+  const overhang = (out) => out.warnings.filter((w) => /overhang/i.test(w));
+  for (const wall of [1.6, 2, 2.5]) {
+    const out = build({ ...PRESETS.trayA, wall });
+    assert.ok(hasWedge(out), `wedge present at wall ${wall}`);
+    assert.equal(overhang(out).length, 0, `no overhang warning at wall ${wall}`);
+  }
+  // rim inner edge is at 1.45 + 1.1 = 2.55; from wall 2.65 the wall carries it
+  assert.ok(!hasWedge(build({ ...PRESETS.trayA, wall: 2.7 })), 'no wedge once the wall reaches the rim inner edge');
+  assert.ok(!hasWedge(build({ ...PRESETS.trayA, lip: false, wall: 1.6 })), 'no wedge without the lip');
 });
 
 test('error paths', () => {

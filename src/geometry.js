@@ -132,8 +132,8 @@ const arcPts = (cx, cz, r, a0, a1, n) => {
  * @returns {{parts: Array<{name: string, geom: THREE.BufferGeometry}>,
  *   warnings: string[], meta: object} | {error: string}}
  *   Parts are emitted in a fixed order (walls, floor/collar or
- *   skirt/groove/center/rim, fillet, scoop, tab); the STL fixture tests
- *   depend on that order.
+ *   skirt/groove/center/rim/wedge, fillet, scoop, tab); the STL fixture
+ *   tests depend on that order.
  */
 export function buildParts(p) {
   const warnings = [];
@@ -197,7 +197,6 @@ export function buildParts(p) {
     lip = false;
     warnings.push('Stacking lip disabled: floor under 1.4 mm cannot take the base groove.');
   }
-  if (lip && wall < 1.8) warnings.push('Stacking lip rim overhangs the cavity slightly on walls under 1.8 mm.');
   const grooveInnerInset = rimOuterInset + rimW + CLR;
 
   const parts = [];
@@ -276,6 +275,16 @@ export function buildParts(p) {
       [rimOuterInset, H - OV], [rimOuterInset + rimW, H - OV],
       [rimOuterInset + rimW - ch2, H + RIM_H], [rimOuterInset + ch2, H + RIM_H]
     ]) });
+    // rim support wedge: on walls thinner than the rim's inner edge the rim
+    // would cantilever over the cavity, so a 45-degree triangle under its
+    // inner edge carries it down to the cavity face (penetrating the wall by PEN)
+    const rimInner = rimOuterInset + rimW;
+    if (wall < rimInner + 0.1) {
+      const run = rimInner + OV - (wall - PEN);
+      parts.push({ name: 'wedge', geom: sweepSolid(W, D, outerR4, [
+        [wall - PEN, H - OV], [rimInner + OV, H - OV], [wall - PEN, H - OV - run]
+      ]) });
+    }
   }
 
   // ---- interior floor fillet: concave sweep around each compartment perimeter ----
